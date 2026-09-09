@@ -6,7 +6,9 @@ export default defineConfig({
   test: {
     passWithNoTests: true,
     include: ["src/**/*.test.ts"],
-    exclude: ["node_modules", "dist", "test", "**/__fixtures__/**"],
+    // *.a11y.test.ts is run by `yarn test:a11y`, which the pipeline calls separately —
+    // excluded here so CI does not run the axe sweep twice.
+    exclude: ["node_modules", "dist", "test", "**/__fixtures__/**", "**/*.a11y.test.ts"],
     coverage: {
       reporter: ["lcov", "text"],
       reportsDirectory: "coverage"
