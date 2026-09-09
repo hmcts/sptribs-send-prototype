@@ -1,0 +1,18 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "group:allNonMajor", ":dependencyDashboard"],
+  "labels": ["dependencies"],
+  "schedule": ["before 6am on Monday"],
+  "packageRules": [
+    {
+      "description": "The @hmcts-cft/* starter packages move together; a split update leaves the app half on one API.",
+      "matchPackagePatterns": ["^@hmcts-cft/"],
+      "groupName": "hmcts-cft starter"
+    },
+    {
+      "description": "Playwright's runner and browser builds have to match.",
+      "matchPackageNames": ["@playwright/test", "playwright-core"],
+      "groupName": "playwright"
+    }
+  ]
+}
