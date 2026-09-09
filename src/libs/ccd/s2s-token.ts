@@ -1,5 +1,8 @@
 import config from "config";
-import { authenticator } from "otplib";
+// totp-generator rather than otplib: otplib 12 and its three @otplib/* plugins are all
+// deprecated ("upgrade to v13"), which the pipeline's yarn audit reports as four findings.
+// The sibling CFT frontends use this instead.
+import { TOTP } from "totp-generator";
 import { CcdError } from "./ccd-error.js";
 import type { HttpClient } from "./http.js";
 
@@ -30,7 +33,7 @@ export function s2sTokenProvider(http: HttpClient, now: () => number = Date.now)
     const url = `${config.get<string>("s2s.url")}/lease`;
     const body = JSON.stringify({
       microservice: config.get<string>("s2s.microservice"),
-      oneTimePassword: authenticator.generate(config.get<string>("s2s.secret"))
+      oneTimePassword: TOTP.generate(config.get<string>("s2s.secret")).otp
     });
 
     const reply = await http(url, { method: "POST", headers: { "content-type": "application/json" }, body });
