@@ -1,0 +1,24 @@
+{% extends "layouts/default.njk" %}
+{% from "govuk/components/header/macro.njk" import govukHeader %}
+{% from "govuk/components/service-navigation/macro.njk" import govukServiceNavigation %}
+
+{% block pageTitle %}
+  {% if title %}{{ title }} - {% endif %}{{ serviceName }} - GOV.UK
+{% endblock %}
+
+{# GOV.UK crest bar + a service-navigation row carrying the service name and,
+   when signed in, a Sign out link to /logout (the OIDC logout route).
+   isSignedIn is set per-request by setUser(). The Sign out link is pushed to
+   the right (send-service-navigation__account, index.scss) so account actions
+   sit where users expect them, away from the service name. #}
+{% block header %}
+  {{ govukHeader({}) }}
+  {{ govukServiceNavigation({
+    serviceName: serviceName,
+    serviceUrl: "/",
+    navigationClasses: "send-service-navigation__account" if isSignedIn,
+    navigation: [
+      { href: "/logout", text: "Sign out" } if isSignedIn
+    ]
+  }) }}
+{% endblock %}

@@ -1,0 +1,20 @@
+# Local dependencies for sptribs-send-prototype that the CFT stack does NOT provide.
+#
+# Redis only. CCD (definition store :4451, data store :4452), the IDAM simulator
+# (:5062), S2S (:8489) and XUI (:3000) all come from cftlib — run
+# `./gradlew bootWithCCD -PlocalAuth` in apps/sptribs/sptribs-case-api. Do not
+# duplicate them here.
+#
+#   yarn deps:up            # start
+#   yarn deps:down          # stop
+#   docker compose down -v  # clean slate (drops any saved drafts)
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10

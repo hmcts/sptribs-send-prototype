@@ -1,0 +1,45 @@
+redis:
+  enabled: false
+  architecture: standalone
+  master:
+    persistence:
+      enabled: false
+  auth:
+    enabled: false
+
+idam-pr:
+  enabled: false
+
+nodejs:
+  applicationPort: 3211
+  aadIdentityName: sptribs
+  ingressHost: sptribs-send-prototype.{{ .Values.global.environment }}.platform.hmcts.net
+  image: "hmctsprod.azurecr.io/sptribs/send-prototype:latest"
+  keyVaults:
+    # Reused rather than new. The prototype signs in with the existing
+    # `sptribs-frontend` IDAM client and calls CCD as the existing
+    # `sptribs_case_api` microservice, so it needs no secrets of its own — and
+    # `sptribs_case_api` is already in the data store's authorised-services list.
+    # A dedicated IDAM client and S2S microservice are the right thing for a real
+    # service; see README.md, "Prototype-only shortcuts".
+    sptribs:
+      secrets:
+        - idam-ui-secret
+        - s2s-case-api-secret
+        - app-insights-connection-string
+        - redis-access-key
+  environment:
+    REDIS_TTL: 6000
+    REDIS_SESSION_PREFIX: "sptribs-send-prototype"
+    CCD_URL: "http://ccd-data-store-api-{{ .Values.global.environment }}.service.core-compute-{{ .Values.global.environment }}.internal"
+    S2S_URL: "http://rpe-service-auth-provider-{{ .Values.global.environment }}.service.core-compute-{{ .Values.global.environment }}.internal"
+    S2S_MICROSERVICE: sptribs_case_api
+    # Hyphen, not a slash: the route is src/pages/(shared)/(oauth2-callback).
+    OIDC_REDIRECT_URI: "https://sptribs-send-prototype.{{ .Values.global.environment }}.platform.hmcts.net/oauth2-callback"
+    OIDC_ISSUER: "https://idam-web-public.{{ .Values.global.environment }}.platform.hmcts.net/o"
+    OIDC_CLIENT_ID: sptribs-frontend
+    OTEL_SERVICE_NAME: sptribs-send-prototype
+    OTEL_ENABLED: true
+    CASE_TYPE_ID: StSend35
+    JURISDICTION_ID: ST_CIC
+    CCD_CREATE_EVENT: create-case

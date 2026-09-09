@@ -1,0 +1,6 @@
+{# Hidden CSRF field. Every <form method="post"> must include this:
+
+     {% include "_partials/csrf-input.njk" %}
+
+   `csrfToken` is set per-request on res.locals by src/middleware/csrf.ts. #}
+<input type="hidden" name="_csrf" value="{{ csrfToken }}">

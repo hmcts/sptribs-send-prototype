@@ -1,0 +1,64 @@
+{% extends "_layouts/citizen.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: back, href: backHref }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% if errors | length %}
+        {{ govukErrorSummary({ titleText: errorSummaryTitle, errorList: errors | govukErrorSummary }) }}
+      {% endif %}
+
+      <form method="post" novalidate>
+        {% include "_partials/csrf-input.njk" %}
+        <span class="govuk-caption-l">{{ caption }}</span>
+        <h1 class="govuk-heading-l">{{ heading }}</h1>
+
+        {{ govukInput({
+          id: "firstName",
+          name: "firstName",
+          value: values.firstName,
+          type: "text",
+          label: { text: firstNameLabel, classes: "govuk-label--s" },
+          errorMessage: { text: errors.firstName } if errors.firstName
+        }) }}
+
+        {{ govukInput({
+          id: "lastName",
+          name: "lastName",
+          value: values.lastName,
+          type: "text",
+          label: { text: lastNameLabel, classes: "govuk-label--s" },
+          errorMessage: { text: errors.lastName } if errors.lastName
+        }) }}
+
+        {{ govukInput({
+          id: "mobileNumber",
+          name: "mobileNumber",
+          value: values.mobileNumber,
+          type: "tel",
+          label: { text: mobileNumberLabel, classes: "govuk-label--s" },
+          hint: { text: mobileNumberHint },
+          errorMessage: { text: errors.mobileNumber } if errors.mobileNumber
+        }) }}
+
+        {{ govukInput({
+          id: "emailAddress",
+          name: "emailAddress",
+          value: values.emailAddress,
+          type: "email",
+          label: { text: emailAddressLabel, classes: "govuk-label--s" },
+          errorMessage: { text: errors.emailAddress } if errors.emailAddress
+        }) }}
+
+        {{ govukButton({ text: continueText or save }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,22 @@
+apiVersion: v2
+appVersion: "1.0"
+description: A Helm chart for the SEND35 citizen prototype
+name: sptribs-send-prototype
+home: https://github.com/hmcts/sptribs-send-prototype
+version: 0.0.1
+dependencies:
+  - name: nodejs
+    version: 3.2.1
+    repository: "oci://hmctsprod.azurecr.io/helm"
+  # Preview only. AAT and above use the sptribs Azure Cache for Redis created in
+  # infrastructure/, so this stays off outside Preview.
+  - name: redis
+    version: 22.0.7
+    repository: "oci://registry-1.docker.io/bitnamicharts"
+    condition: redis.enabled
+  # Registers this deployment's OAuth redirect URI against the sptribs-frontend IDAM
+  # client, which is what lets a per-PR hostname sign in at all.
+  - name: idam-pr
+    version: 2.3.1
+    repository: "oci://hmctsprod.azurecr.io/helm"
+    condition: idam-pr.enabled

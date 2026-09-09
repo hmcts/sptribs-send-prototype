@@ -1,0 +1,47 @@
+{% extends "_layouts/citizen.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: back, href: backHref }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% if errors | length %}
+        {{ govukErrorSummary({ titleText: errorSummaryTitle, errorList: errors | govukErrorSummary }) }}
+      {% endif %}
+
+      <form method="post" novalidate>
+        {% include "_partials/csrf-input.njk" %}
+        <span class="govuk-caption-l">{{ caption }}</span>
+
+        {% set hasCertificateItems = [] %}
+        {% for option in hasCertificateOptions %}
+          {% set _ = hasCertificateItems.push({
+            value: option.value,
+            text: option.text,
+            hint: { text: option.hint } if option.hint,
+            checked: option.value == values.hasCertificate
+          }) %}
+        {% endfor %}
+        {{ govukRadios({
+          name: "hasCertificate",
+          idPrefix: "hasCertificate",
+          fieldset: { legend: { text: hasCertificateLabel, isPageHeading: true, classes: "govuk-fieldset__legend--l" } },
+          hint: { text: hasCertificateHint },
+          items: hasCertificateItems,
+          errorMessage: { text: errors.hasCertificate } if errors.hasCertificate
+        }) }}
+
+        {{ govukDetails({ summaryText: detailsSummary, text: detailsText }) }}
+
+        {{ govukButton({ text: continueText or save }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

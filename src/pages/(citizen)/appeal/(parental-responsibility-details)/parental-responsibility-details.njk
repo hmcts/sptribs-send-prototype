@@ -1,0 +1,65 @@
+{% extends "_layouts/citizen.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/character-count/macro.njk" import govukCharacterCount %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: back, href: backHref }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% if errors | length %}
+        {{ govukErrorSummary({ titleText: errorSummaryTitle, errorList: errors | govukErrorSummary }) }}
+      {% endif %}
+
+      <form method="post" novalidate>
+        {% include "_partials/csrf-input.njk" %}
+        <span class="govuk-caption-l">{{ caption }}</span>
+        <h1 class="govuk-heading-l">{{ heading }}</h1>
+
+        {{ govukInput({
+          id: "name",
+          name: "name",
+          value: values.name,
+          type: "text",
+          label: { text: nameLabel, classes: "govuk-label--s" },
+          errorMessage: { text: errors.name } if errors.name
+        }) }}
+
+        {% set toldItems = [] %}
+        {% for option in toldOptions %}
+          {% set _ = toldItems.push({
+            value: option.value,
+            text: option.text,
+            hint: { text: option.hint } if option.hint,
+            checked: option.value == values.told
+          }) %}
+        {% endfor %}
+        {{ govukRadios({
+          name: "told",
+          idPrefix: "told",
+          fieldset: { legend: { text: toldLabel, classes: "govuk-fieldset__legend--s" } },
+          items: toldItems,
+          errorMessage: { text: errors.told } if errors.told
+        }) }}
+
+        {{ govukCharacterCount({
+          id: "reasonNotTold",
+          name: "reasonNotTold",
+          value: values.reasonNotTold,
+          maxlength: 2000,
+          rows: 5,
+          label: { text: reasonNotToldLabel, classes: "govuk-label--s" },
+          errorMessage: { text: errors.reasonNotTold } if errors.reasonNotTold
+        }) }}
+
+        {{ govukButton({ text: continueText or save }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

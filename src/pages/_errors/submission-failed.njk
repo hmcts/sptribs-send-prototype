@@ -1,0 +1,24 @@
+{% extends "_layouts/citizen.njk" %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{# CCD would not take the application.
+
+   A proper GOV.UK error page rather than a stack trace, and one that says the
+   answers are safe — because they are: pay.ts clears them only after a case exists,
+   so Try again costs the citizen nothing. #}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-l">{{ title }}</h1>
+
+      <p class="govuk-body">{{ intro }}</p>
+
+      {{ govukButton({ text: tryAgain, href: tryAgainHref }) }}
+
+      <p class="govuk-body">
+        <a class="govuk-link" href="{{ checkAnswersHref }}">{{ checkAnswers }}</a>
+      </p>
+    </div>
+  </div>
+{% endblock %}

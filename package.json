@@ -1,0 +1,91 @@
+{
+  "name": "sptribs-send-prototype",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Prototype citizen frontend for the SEND35 appeal journey — appeal a decision about an education, health and care (EHC) plan.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "imports": {
+    "#appeal": {
+      "production": "./dist/libs/appeal/index.js",
+      "default": "./src/libs/appeal/index.ts"
+    },
+    "#ccd": {
+      "production": "./dist/libs/ccd/index.js",
+      "default": "./src/libs/ccd/index.ts"
+    },
+    "#oidc": {
+      "production": "./dist/libs/oidc/index.js",
+      "default": "./src/libs/oidc/index.ts"
+    },
+    "#zod-validation": {
+      "production": "./dist/libs/zod-validation/index.js",
+      "default": "./src/libs/zod-validation/index.ts"
+    }
+  },
+  "scripts": {
+    "dev": "yarn deps:up && yarn tsx:watch",
+    "tsx:watch": "tsx watch --exclude 'src/assets/**' --exclude '**/*.test.ts' --exclude 'src/pages/**/*.njk' src/server.ts",
+    "deps:up": "docker compose up -d",
+    "deps:down": "docker compose down",
+    "build": "yarn build:server && yarn build:assets && yarn build:views",
+    "build:server": "tsc",
+    "build:assets": "vite build --config vite.config.ts --configLoader runner",
+    "build:views": "node -e \"import('node:fs/promises').then(async fs => { await fs.cp('src/pages', 'dist/pages', { recursive: true, filter: f => !f.endsWith('.ts') && !f.includes('__fixtures__') }); })\"",
+    "clean": "rm -rf dist",
+    "start": "node --conditions=production dist/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test --config test/e2e/playwright.config.ts",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write ."
+  },
+  "dependencies": {
+    "@hmcts-cft/cloud-native-platform": "2.0.0",
+    "@hmcts-cft/express-govuk-starter": "0.1.6",
+    "@hmcts-cft/express-session-redis": "0.1.0",
+    "@hmcts-cft/simple-router": "2.0.0",
+    "@hmcts/cookie-manager": "1.1.0",
+    "config": "4.4.1",
+    "connect-redis": "9.0.0",
+    "cookie-parser": "1.4.7",
+    "express": "5.2.1",
+    "express-session": "1.19.0",
+    "govuk-frontend": "6.1.0",
+    "helmet": "8.1.0",
+    "nunjucks": "3.2.4",
+    "openid-client": "6.8.4",
+    "otplib": "12.0.1",
+    "redis": "5.12.1",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.10.2",
+    "@biomejs/biome": "2.4.15",
+    "@playwright/test": "1.49.1",
+    "@types/config": "4.4.0",
+    "@types/cookie-parser": "1.4.10",
+    "@types/express": "5.0.6",
+    "@types/express-session": "1.19.0",
+    "@types/govuk-frontend": "5.11.0",
+    "@types/node": "24.12.3",
+    "@types/nunjucks": "3.2.6",
+    "@types/supertest": "7.2.0",
+    "@vitest/coverage-v8": "4.1.6",
+    "playwright-core": "1.49.1",
+    "sass": "1.99.0",
+    "supertest": "7.2.2",
+    "tsx": "4.21.0",
+    "typescript": "6.0.3",
+    "vite": "8.0.12",
+    "vite-plugin-static-copy": "4.1.0",
+    "vite-tsconfig-paths": "6.1.1",
+    "vitest": "4.1.6"
+  },
+  "packageManager": "yarn@4.14.1"
+}

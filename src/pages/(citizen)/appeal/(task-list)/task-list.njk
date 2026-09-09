@@ -1,0 +1,41 @@
+{% extends "_layouts/citizen.njk" %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/task-list/macro.njk" import govukTaskList %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-l">{{ heading }}</h1>
+
+      <p class="govuk-body">{{ progress }}</p>
+      {{ govukInsetText({ text: saveNote }) }}
+
+      {% for group in groups %}
+        <h2 class="govuk-heading-m">{{ group.title }}</h2>
+
+        {% set items = [] %}
+        {% for task in group.tasks %}
+          {% set _ = items.push({
+            title: { text: task.title },
+            href: task.href,
+            status: {
+              text: statusCompleted if task.complete else statusNotStarted,
+              classes: "" if task.complete else "govuk-task-list__status--cannot-start-yet"
+            }
+          }) %}
+        {% endfor %}
+        {{ govukTaskList({ idPrefix: group.id, items: items }) }}
+      {% endfor %}
+
+      <h2 class="govuk-heading-m">{{ submitHeading }}</h2>
+      {% if ready %}
+        <p class="govuk-body">{{ submitReady }}</p>
+        {{ govukButton({ text: checkAnswers, href: "/appeal/check-answers" }) }}
+      {% else %}
+        <p class="govuk-body">{{ submitNotReady }}</p>
+        {{ govukButton({ text: checkAnswers, href: "/appeal/check-answers", disabled: true }) }}
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
