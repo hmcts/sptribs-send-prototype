@@ -17,6 +17,6 @@ dependencies:
   # Registers this deployment's OAuth redirect URI against the sptribs-frontend IDAM
   # client, which is what lets a per-PR hostname sign in at all.
   - name: idam-pr
-    version: 2.3.1
+    version: 2.4.0
     repository: "oci://hmctsprod.azurecr.io/helm"
     condition: idam-pr.enabled
