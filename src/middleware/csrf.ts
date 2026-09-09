@@ -6,29 +6,25 @@ const HEADER_NAME = "x-csrf-token";
 const SECRET_BYTES = 32;
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
-const MULTIPART = "multipart/form-data";
-
 /**
  * Session-backed synchroniser-token CSRF protection.
  *
  * A per-session secret is minted on first request and kept in the (Redis-backed,
- * signed-cookie-addressed) session. Every render gets a fresh token derived from
- * that secret plus a random salt, exposed as `res.locals.csrfToken`; templates
- * emit it with the `csrfInput()` nunjucks global or the `_csrf-input.njk`
- * partial. Unsafe requests must present a token whose HMAC matches the session
- * secret, or they are rejected with a GDS-styled 403.
+ * signed-cookie-addressed) session. Every render gets a fresh token derived from that
+ * secret plus a random salt, exposed as `res.locals.csrfToken`; templates emit it by
+ * including `_partials/csrf-input.njk`. Unsafe requests must present a token whose HMAC
+ * matches the session secret, or they are rejected with a GDS-styled 403.
  *
- * The token is not the secret, so it is safe to render into HTML; a per-render
- * salt means tokens differ between pages and cannot be replayed by a BREACH-style
- * compression oracle.
+ * The token is not the secret, so it is safe to render into HTML; a per-render salt means
+ * tokens differ between pages and cannot be replayed by a BREACH-style compression oracle.
  *
- * ## Multipart posts
- *
- * This is mounted app-level, ahead of the router, where the body of a
- * `multipart/form-data` post has not been parsed yet — so a file upload's `_csrf`
- * field is invisible here and the request would be rejected. Multipart is therefore
- * skipped here and checked by `verifyCsrf()` instead, which the upload middleware
- * mounts itself so a page cannot forget it. See `upload.ts`.
+ * Every unsafe request is checked here, at app level, ahead of the router. That is only
+ * possible because this service accepts no `multipart/form-data`: a multipart body is still
+ * an unparsed stream at this point, so its `_csrf` field would be invisible and the check
+ * would have to be deferred until after the body was parsed. If document upload is ever
+ * added, that deferral comes back with it — and it has to be bundled with the upload
+ * middleware rather than left to each page, because a deferred check a route forgets to
+ * complete is an unprotected endpoint.
  */
 export function csrf(): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -38,60 +34,13 @@ export function csrf(): RequestHandler {
 
     const secret = ensureSecret(req);
 
-    if (needsToken(req) && !isValidToken(readToken(req), secret)) {
+    if (!SAFE_METHODS.has(req.method) && !isValidToken(readToken(req), secret)) {
       return rejectRequest(res);
     }
 
     res.locals.csrfToken = createToken(secret);
     next();
   };
-}
-
-/**
- * Re-check the token once the body has been parsed.
- *
- * The app-level `csrf()` cannot check a multipart post — the body is still an unparsed
- * stream when it runs — so it defers, and this makes good on that. It is mounted by
- * `uploadSingle`/`uploadMultiple` immediately after multer rather than being left to
- * each page, because a deferred check that a route forgets to complete is an
- * unprotected endpoint.
- *
- * A file has been written to disk by the time this runs. That is the cost of accepting
- * a multipart upload at all; the size and type limits are what bound it, and the
- * request still cannot start a job or change any state.
- *
- * Deliberately not multipart-only. It is the same check on any unsafe method, so a
- * caller cannot get it subtly wrong by applying it to a route that turns out not to be
- * multipart — and running it twice costs one HMAC. Safe methods pass straight through,
- * because they were never owed a token.
- */
-export function verifyCsrf(): RequestHandler {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (SAFE_METHODS.has(req.method)) {
-      return next();
-    }
-    // No secret means `csrf()` never ran, so this would be checking a token against
-    // nothing and would reject every request as a 403 — a broken endpoint that looks
-    // like a security control working. Failing loudly names the wiring mistake instead.
-    if (!req.session?.csrfSecret) {
-      return next(new Error("verifyCsrf() must be mounted after csrf()"));
-    }
-    if (!isValidToken(readToken(req), req.session.csrfSecret)) {
-      return rejectRequest(res);
-    }
-    next();
-  };
-}
-
-/**
- * Whether `csrf()` itself should demand a token.
- *
- * Multipart is deferred to `verifyCsrf`, so a route that accepts an upload without
- * mounting it would be unprotected. The upload middleware bundles the verifier with
- * its handlers to stop that being possible to forget.
- */
-function needsToken(req: Request): boolean {
-  return !SAFE_METHODS.has(req.method) && !req.is(MULTIPART);
 }
 
 function createToken(secret: string): string {
@@ -106,6 +55,7 @@ function ensureSecret(req: Request): string {
   return req.session.csrfSecret;
 }
 
+/** The hidden form field, or the header for anything posting without a form. */
 function readToken(req: Request): string | undefined {
   const fromBody = (req.body as Record<string, unknown> | undefined)?.[FIELD_NAME];
   if (typeof fromBody === "string") {
@@ -130,12 +80,25 @@ function sign(salt: string, secret: string): string {
   return createHmac("sha256", secret).update(salt).digest("hex");
 }
 
+/**
+ * Constant-time comparison.
+ *
+ * `timingSafeEqual` throws on a length mismatch, so the lengths are compared first — that
+ * comparison leaks only the length of a hex digest, which is fixed anyway.
+ */
 function equals(a: string, b: string): boolean {
   const left = Buffer.from(a);
   const right = Buffer.from(b);
   return left.length === right.length && timingSafeEqual(left, right);
 }
 
+/**
+ * A page, not a bare 403.
+ *
+ * The overwhelmingly common cause is not an attack: it is somebody coming back to a form
+ * they left open, or submitting twice. They need to know what to do next, which is why this
+ * renders and says it.
+ */
 function rejectRequest(res: Response): void {
   res.status(403).render("_errors/csrf", {
     en: {
@@ -143,10 +106,11 @@ function rejectRequest(res: Response): void {
       intro: "The page you were on has expired or was submitted twice. Start again from the beginning.",
       back: "Return to start"
     },
+    // SEND is an England-only jurisdiction, so there is no Welsh content to write.
     cy: {
-      title: "Mae'n ddrwg gennym, mae problem gyda'r gwasanaeth",
-      intro: "Mae'r dudalen yr oeddech arni wedi dod i ben neu wedi'i chyflwyno ddwywaith. Dechreuwch eto o'r dechrau.",
-      back: "Dychwelyd i'r dudalen ddechrau"
+      title: "Sorry, there is a problem with the service",
+      intro: "The page you were on has expired or was submitted twice. Start again from the beginning.",
+      back: "Return to start"
     }
   });
 }
