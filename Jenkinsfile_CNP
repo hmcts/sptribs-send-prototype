@@ -37,7 +37,7 @@ withPipeline(type, product, component) {
     // the sptribs namespace — and the pipeline's envsubst puts this into
     // values.preview.template.yaml. Update it when you point the prototype at a
     // different case-api PR.
-    env.CASE_API_PR = "0"
+    env.CASE_API_PR = "2642"
 
     env.TEST_URL = "https://sptribs-send-prototype-pr-${CHANGE_ID}.preview.platform.hmcts.net"
   }
