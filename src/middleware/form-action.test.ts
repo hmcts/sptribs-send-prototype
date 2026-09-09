@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { withFormAction } from "./form-action.js";
+import { describe, expect, it, vi } from "vitest";
+import { allowIdamFormAction, withFormAction } from "./form-action.js";
 
 describe("withFormAction", () => {
   it("should add the origin to an existing form-action", () => {
@@ -26,5 +26,51 @@ describe("withFormAction", () => {
     const policy = "form-action 'self';frame-ancestors 'none'";
 
     expect(withFormAction(policy, "https://idam.example")).toContain("frame-ancestors 'none'");
+  });
+});
+
+describe("allowIdamFormAction", () => {
+  const responseWith = (header?: string) => {
+    const headers = new Map<string, string>();
+    if (header) {
+      headers.set("Content-Security-Policy", header);
+    }
+    return {
+      getHeader: (name: string) => headers.get(name),
+      setHeader: (name: string, value: string) => headers.set(name, value),
+      header: () => headers.get("Content-Security-Policy")
+    };
+  };
+
+  it("should add the IDAM origin to the policy the starter already set", () => {
+    const res = responseWith("default-src 'self'; form-action 'self'");
+    const next = vi.fn();
+
+    allowIdamFormAction("https://idam-web-public.aat.platform.hmcts.net/o")({} as never, res as never, next as never);
+
+    // The origin only — a CSP source expression has no path.
+    expect(res.header()).toBe("default-src 'self'; form-action 'self' https://idam-web-public.aat.platform.hmcts.net");
+    expect(next).toHaveBeenCalled();
+  });
+
+  it("should leave the response alone when no policy has been set", () => {
+    const res = responseWith();
+    const next = vi.fn();
+
+    allowIdamFormAction("https://idam.example/o")({} as never, res as never, next as never);
+
+    expect(res.header()).toBeUndefined();
+    expect(next).toHaveBeenCalled();
+  });
+
+  it("should not break the request when the issuer is not a URL", () => {
+    // Misconfiguration should degrade to "no extra allowance", not a 500 on every page.
+    const res = responseWith("form-action 'self'");
+    const next = vi.fn();
+
+    allowIdamFormAction("not-a-url")({} as never, res as never, next as never);
+
+    expect(res.header()).toBe("form-action 'self'");
+    expect(next).toHaveBeenCalled();
   });
 });
