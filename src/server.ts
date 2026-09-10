@@ -1,10 +1,20 @@
-import { createApp } from "./app.js";
+// `./secrets.js` is the only static import here, and `app.js` is imported dynamically
+// below, because the secrets have to be in `process.env` before node-config is first
+// imported — it snapshots the environment then and never re-reads it.
+//
+// Deferring the `config` import in *this* file was not enough, and that was the bug: a
+// static `import { createApp } from "./app.js"` pulls in `#oidc` and `#ccd`, both of which
+// statically import node-config, so config was fully initialised from the placeholders in
+// `config/default.json` before `createApp()`'s first line ever ran.
+import { loadSecrets } from "./secrets.js";
 
 async function startServer() {
+  await loadSecrets();
+
+  // Dynamic, so it resolves only after loadSecrets() has populated process.env.
+  const { createApp } = await import("./app.js");
   const app = await createApp();
 
-  // Imported after createApp, not at the top: createApp fetches the deployed secrets
-  // before it loads node-config, and node-config snapshots process.env on first import.
   // Reading the port from config rather than straight from process.env keeps
   // config/default.json the one place the local port is written down —
   // custom-environment-variables.json already maps PORT onto it for deployments.

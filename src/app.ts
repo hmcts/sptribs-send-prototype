@@ -1,30 +1,29 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { getPropertiesVolumeSecrets, hc, healthcheck, monitoringMiddleware } from "@hmcts-cft/cloud-native-platform";
-import { configureCookieManager, configureGovuk, configureHelmet, configureNonce, errorHandler, notFoundHandler } from "@hmcts-cft/express-govuk-starter";
+import { hc, healthcheck, monitoringMiddleware } from "@hmcts-cft/cloud-native-platform";
+import { configureGovuk, configureHelmet, configureNonce, errorHandler, notFoundHandler } from "@hmcts-cft/express-govuk-starter";
 import { createSimpleRouter } from "@hmcts-cft/simple-router";
 import cookieParser from "cookie-parser";
 import type { Express } from "express";
 import express from "express";
 import { setUser, setupOidcClient } from "#oidc";
 import { translateErrors } from "#zod-validation";
+import { cookieManager } from "./middleware/cookies.js";
 import { csrf } from "./middleware/csrf.js";
 import { allowIdamFormAction } from "./middleware/form-action.js";
 import { configureRedis } from "./middleware/redis.js";
+import { loadSecrets } from "./secrets.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export async function createApp(): Promise<Express> {
-  // REDIS_URL is omitted so the local docker-compose Redis (config/default.json)
-  // wins over any deployed-environment secret leaking into the process env.
-  await getPropertiesVolumeSecrets({
-    chartPath: path.join(__dirname, "../charts/sptribs-send-prototype/values.yaml"),
-    omit: ["REDIS_URL"]
-  });
+  // A safety net, not the real load: `server.ts` calls this before importing this module at
+  // all, which is the only ordering that works. By the time createApp runs, the static
+  // imports above have already initialised node-config via `#oidc` — so loading secrets
+  // here for the first time would be too late. Memoised, so the normal path is a no-op.
+  await loadSecrets();
 
-  // Imported dynamically and only after the secrets are in place: node-config
-  // snapshots process.env at first import.
   const { default: config } = await import("config");
   const isDev = process.env.NODE_ENV !== "production";
   const app = express();
@@ -67,13 +66,17 @@ export async function createApp(): Promise<Express> {
         { distPath: __dirname }
   });
 
-  await configureCookieManager(app, {
-    categories: {
-      essential: ["connect.sid"],
+  // Our own, not the starter's configureCookieManager: that one also registers its own
+  // GET /cookies on the starter's layout, whose header loses the service name under
+  // govuk-frontend 6. See src/middleware/cookies.ts. The preferences page is an ordinary
+  // page under src/pages/(shared)/(cookies)/.
+  app.use(
+    cookieManager({
+      essential: ["connect.sid", "cookie_policy", "cookies_preferences_set"],
       analytics: [],
       preferences: ["language"]
-    }
-  });
+    })
+  );
 
   app.use(setUser());
   app.use(csrf());
