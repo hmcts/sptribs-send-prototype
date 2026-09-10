@@ -56,43 +56,52 @@ export async function setupOidcClient(): Promise<client.Configuration> {
     // Seeded first: the issuer probe mints a token, which the simulator will only do
     // once it has users to mint against.
     await seedSimulatorUsers(issuer);
-    clientConfig = await reconcileSimulatorIssuer(discovered, issuer, clientId, clientSecret);
-  } else {
-    clientConfig = discovered;
   }
+
+  clientConfig = await reconcileIssuer(discovered, issuer, clientId, clientSecret, isLocalSimulator);
 
   return clientConfig;
 }
 
 /**
- * Reconcile the local IDAM simulator's advertised issuer with the one it signs.
+ * Reconcile the issuer IDAM *advertises* with the one it actually *signs*.
  *
  * openid-client v6 checks the `iss` claim on every token against the issuer from the
- * discovery document, and rejects any difference as `ClientError: invalid response
- * encountered` — which surfaces as a 500 on `/oauth2-callback` and makes local sign-in
- * impossible.
+ * discovery document, and rejects any difference — which surfaces as a 500 on
+ * `/oauth2-callback` and makes sign-in impossible.
  *
- * The simulator has historically disagreed with itself here, because two settings
- * control the two values independently:
+ * **Real IDAM disagrees with itself.** AAT advertises
+ * `https://idam-web-public.aat.platform.hmcts.net/o` and signs
+ * `https://forgerock-am.service.core-compute-idam-aat2.internal:8443/openam/oauth2/realms/root/realms/hmcts`
+ * — its internal ForgeRock hostname, which is not reachable from outside the cluster and
+ * cannot be configured as the issuer. Every AAT sign-in fails the check. `aud` and `azp`
+ * are both correct; the issuer is the only claim that disagrees.
  *
- *     SIMULATOR_OPENID_BASE-URL   → the issuer discovery advertises
- *     SIMULATOR_JWT_ISSUER        → the `iss` claim tokens actually carry
+ * The simulator disagrees too, for its own reason: two settings control the two values
+ * independently (`SIMULATOR_OPENID_BASE-URL` for discovery, `SIMULATOR_JWT_ISSUER` for the
+ * claim), and different images have signed `/o` and the bare origin.
  *
- * Older images advertised `http://localhost:5062/o` while signing the bare origin;
- * current ones sign `/o` too. Both have been seen on this stack, so rather than encode
- * either shape this asks the simulator directly: mint a token and read its `iss`. That
- * is the value being validated, so it is the one to expect — and it cannot go stale the
- * way a hardcoded transform did. (A previous version of this stripped a trailing `/o`
- * unconditionally, and started *causing* the mismatch once the image was updated.)
+ * So rather than special-case either, this asks the server directly: mint a token and read
+ * its `iss`. That is the value being validated, so it is the one to expect — and it cannot go
+ * stale the way a hardcoded transform did. (An earlier version stripped a trailing `/o`
+ * unconditionally and began *causing* the mismatch when the simulator image changed.)
  *
- * Note the relaxation this is NOT: it does not skip the issuer check. The check still
- * happens, against a value read from the server rather than assumed. A token from any
- * other issuer is still rejected.
+ * **What this is not:** it does not skip the issuer check, and it does not accept whatever an
+ * id_token claims. The check still happens, on every token, against a value read once at boot
+ * from the token endpoint — reached over HTTPS at the configured issuer, authenticated with
+ * the client secret. A token from any other issuer is still rejected. What it removes is the
+ * assumption that a server advertises the same string it signs, which HMCTS IDAM does not.
  *
- * Gated on `http:` by the caller, so it can never apply to a real IDAM — those are
- * https, and a genuine issuer mismatch there is an attack, not a misconfiguration.
+ * If the probe cannot mint a token the discovered issuer stands, so a misconfiguration still
+ * fails loudly rather than silently accepting anything.
  */
-async function reconcileSimulatorIssuer(discovered: client.Configuration, issuer: URL, clientId: string, clientSecret: string): Promise<client.Configuration> {
+async function reconcileIssuer(
+  discovered: client.Configuration,
+  issuer: URL,
+  clientId: string,
+  clientSecret: string,
+  isLocalSimulator: boolean
+): Promise<client.Configuration> {
   // `serverMetadata()` returns the document plus a `supportsPKCE()` helper. Spreading
   // takes the helper along, which is not valid metadata, so it is dropped by name —
   // the rest of the document is carried over untouched.
@@ -102,35 +111,63 @@ async function reconcileSimulatorIssuer(discovered: client.Configuration, issuer
     return discovered;
   }
 
+  console.log(`IDAM signs a different issuer than it advertises; expecting "${asserted}" rather than "${metadata.issuer}"`);
+
   const reconciled = new client.Configuration({ ...metadata, issuer: asserted }, clientId, clientSecret);
-  // Re-applied because this is a new Configuration, not the discovered one: the
-  // simulator is plain http and openid-client refuses insecure requests by default.
-  client.allowInsecureRequests(reconciled);
+  if (isLocalSimulator) {
+    // Re-applied because this is a new Configuration, not the discovered one: the
+    // simulator is plain http and openid-client refuses insecure requests by default.
+    client.allowInsecureRequests(reconciled);
+  }
   return reconciled;
 }
 
 /**
- * The `iss` the simulator actually signs, read from a token it mints.
+ * The `iss` the server actually signs, read from a token it mints.
  *
- * Uses the password grant against a throwaway account — the simulator issues a token for
- * any username, and only the claim is wanted, not a session. Returns undefined if
- * anything goes wrong, in which case the discovered issuer stands: a sign-in that then
- * fails reports the real mismatch, which is more useful than a guess.
+ * Two grants are tried, because the two IDAMs answer to different ones and neither works
+ * everywhere:
+ *
+ * - **client_credentials** works on real IDAM and needs no user account, which is what makes
+ *   this safe to do at boot. It must ask for a scope other than `openid` — IDAM answers
+ *   "Client_credentials does not support openid scope" — and the `iss` on the resulting access
+ *   token is the same one id_tokens carry.
+ * - **password**, against a throwaway account, is the simulator's path: it mints a token for
+ *   any username and does not implement client_credentials.
+ *
+ * Returns undefined if both fail, in which case the discovered issuer stands and a sign-in
+ * that then fails reports the real mismatch — better than a guess.
  */
 export async function assertedIssuer(issuer: URL, clientId: string, clientSecret: string): Promise<string | undefined> {
-  const base = issuer.href.replace(/\/o\/?$/, "");
+  const tokenUrl = `${issuer.href.replace(/\/o\/?$/, "")}/o/token`;
+
+  const grants: Record<string, string>[] = [
+    { grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret, scope: "profile" },
+    {
+      grant_type: "password",
+      client_id: clientId,
+      client_secret: clientSecret,
+      username: ISSUER_PROBE_USER,
+      password: "probe",
+      scope: "openid profile roles"
+    }
+  ];
+
+  for (const grant of grants) {
+    const asserted = await issuerFromGrant(tokenUrl, grant);
+    if (asserted) {
+      return asserted;
+    }
+  }
+  return undefined;
+}
+
+async function issuerFromGrant(tokenUrl: string, grant: Record<string, string>): Promise<string | undefined> {
   try {
-    const reply = await fetch(`${base}/o/token`, {
+    const reply = await fetch(tokenUrl, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "password",
-        client_id: clientId,
-        client_secret: clientSecret,
-        username: ISSUER_PROBE_USER,
-        password: "probe",
-        scope: "openid profile roles"
-      })
+      body: new URLSearchParams(grant)
     });
     if (!reply.ok) {
       return undefined;
@@ -142,7 +179,13 @@ export async function assertedIssuer(issuer: URL, clientId: string, clientSecret
   }
 }
 
-/** The `iss` claim of a JWT, without verifying it — this is a local simulator probe. */
+/**
+ * The `iss` claim of a JWT, read without verifying the signature.
+ *
+ * Safe here because the value is not trusted as an assertion: it is the *expectation* that
+ * openid-client will then verify every real token against, and it was fetched over HTTPS from
+ * the configured issuer using the client secret. Nothing is authenticated on the strength of it.
+ */
 function issuerClaimOf(token: string): string | undefined {
   const payload = token.split(".")[1];
   if (!payload) {

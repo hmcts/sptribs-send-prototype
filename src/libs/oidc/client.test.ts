@@ -1,21 +1,22 @@
 import * as client from "openid-client";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { assertedIssuer, setupOidcClient } from "./client.js";
 
 /**
- * The local IDAM simulator's issuer, and agreeing with it.
+ * Agreeing with whichever issuer IDAM actually signs.
  *
  * openid-client v6 validates the `iss` claim on every token against the issuer from
- * discovery, and rejects any difference as `ClientError: invalid response encountered`
- * — a 500 on `/oauth2-callback` and no local sign-in.
+ * discovery, and rejects any difference — a 500 on `/oauth2-callback` and no sign-in at all.
  *
- * The simulator has served both shapes: older images advertised `…:5062/o` while signing
- * the bare origin, current ones sign `/o` too. The first version of this code stripped a
- * trailing `/o` unconditionally and so began *causing* the mismatch when the image was
- * updated — which is why the expectation is now read from the server instead.
+ * Both IDAMs disagree with themselves here. **AAT** advertises
+ * `https://idam-web-public.aat.platform.hmcts.net/o` and signs its internal ForgeRock
+ * hostname (`https://forgerock-am.service.core-compute-idam-aat2.internal:8443/openam/...`),
+ * which is unreachable from outside the cluster and cannot be configured as the issuer. The
+ * **simulator** has served both `…:5062/o` and the bare origin depending on the image.
  *
- * These pin that behaviour: ask, do not assume; and stay confined to the local
- * simulator.
+ * The first version of this code stripped a trailing `/o` unconditionally and so began
+ * *causing* the mismatch when the simulator image changed. Hence the rule these pin: ask the
+ * server, do not assume.
  */
 describe("assertedIssuer", () => {
   it("should report the iss claim from a token the simulator mints", async (ctx) => {
@@ -41,7 +42,46 @@ describe("assertedIssuer", () => {
 
     expect(asserted).toBeUndefined();
   });
+
+  it("should read the issuer from a client_credentials grant, as real IDAM requires", async () => {
+    // Real IDAM has no throwaway user to password-grant against, and refuses
+    // client_credentials with the openid scope ("Client_credentials does not support openid
+    // scope"). So the probe asks for `profile` and reads the access token's iss. Without this
+    // grant, assertedIssuer returns undefined against AAT, the advertised issuer stands, and
+    // every sign-in fails the claim check — which is exactly what happened.
+    const requests: URLSearchParams[] = [];
+    const forgerock = "https://forgerock-am.service.core-compute-idam-aat2.internal:8443/openam/oauth2/realms/root/realms/hmcts";
+
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      const body = new URLSearchParams(String((init as RequestInit).body));
+      requests.push(body);
+      // Mirror IDAM: password grants are refused, client_credentials is not.
+      if (body.get("grant_type") !== "client_credentials") {
+        return new Response('{"error":"invalid_grant"}', { status: 400 });
+      }
+      return new Response(JSON.stringify({ access_token: jwtWithIssuer(forgerock) }), {
+        status: 200,
+        headers: { "content-type": "application/json" }
+      });
+    });
+
+    try {
+      const asserted = await assertedIssuer(new URL("https://idam-web-public.aat.platform.hmcts.net/o"), "sptribs-frontend", "secret");
+
+      expect(asserted).toBe(forgerock);
+      const clientCredentials = requests.find((body) => body.get("grant_type") === "client_credentials");
+      expect(clientCredentials?.get("scope"), "asking for openid here is refused by IDAM").not.toContain("openid");
+    } finally {
+      fetchMock.mockRestore();
+    }
+  });
 });
+
+/** An unsigned JWT carrying just an `iss` claim — the probe reads the claim, it does not verify. */
+function jwtWithIssuer(iss: string): string {
+  const part = (value: object) => Buffer.from(JSON.stringify(value)).toString("base64url");
+  return `${part({ alg: "none" })}.${part({ iss })}.`;
+}
 
 describe("setupOidcClient against the local simulator", () => {
   it("should build a config whose issuer matches the id_token's iss claim", async (ctx) => {

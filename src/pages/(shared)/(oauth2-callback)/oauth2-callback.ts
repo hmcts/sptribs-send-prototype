@@ -89,8 +89,29 @@ async function exchangeCode(
       console.error(`IDAM rejected the token exchange: ${oauthError.error} — ${oauthError.error_description ?? "no description"}`);
       throw new Error(`IDAM token exchange failed: ${oauthError.error}`, { cause: caught });
     }
+
+    // A failed claim check is just as anonymous. openid-client collapses every claim
+    // comparison into the one message "unexpected JWT claim value encountered" and puts the
+    // claim, the expected value and the actual value on `err.cause` — which the errorHandler
+    // never prints, so the log names neither the claim nor the mismatch.
+    const detail = claimMismatch(caught);
+    if (detail) {
+      console.error(`IDAM's id_token failed validation: ${detail}`);
+      throw new Error(`IDAM id_token rejected: ${detail}`, { cause: caught });
+    }
+
     throw caught;
   }
+}
+
+/** The claim, and the two values, out of an openid-client claim-comparison failure. */
+function claimMismatch(caught: unknown): string | undefined {
+  const cause = (caught as { cause?: unknown }).cause as { claim?: string; expected?: unknown; claims?: Record<string, unknown>; message?: string } | undefined;
+  if (!cause?.claim) {
+    return undefined;
+  }
+  const actual = cause.claims?.[cause.claim];
+  return `${cause.claim} was ${JSON.stringify(actual)}, expected ${JSON.stringify(cause.expected)}`;
 }
 
 function currentUrl(req: Request): URL {
