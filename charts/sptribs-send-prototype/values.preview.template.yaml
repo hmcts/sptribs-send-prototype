@@ -12,11 +12,19 @@ nodejs:
   ingressHost: ${SERVICE_FQDN}
   keyVaults:
     sptribs:
+      # Every secret needs an explicit alias. getPropertiesVolumeSecrets injects each
+      # mounted file as an environment variable named after the secret's `alias`, or after
+      # the file itself when there is none — so a bare `idam-ui-secret` arrives as
+      # `process.env["idam-ui-secret"]`, which custom-environment-variables.json does not
+      # read. Nothing fails at boot; the token exchange just fails at sign-in with the
+      # client_secret missing.
       secrets:
         - name: app-insights-connection-string-preview
-          alias: app-insights-connection-string
-        - idam-ui-secret
-        - s2s-case-api-secret
+          alias: APPLICATIONINSIGHTS_CONNECTION_STRING
+        - name: idam-ui-secret
+          alias: OIDC_CLIENT_SECRET
+        - name: s2s-case-api-secret
+          alias: S2S_SECRET
   environment:
     REDIS_URL: "redis://${SERVICE_NAME}-redis-master:6379"
     OIDC_REDIRECT_URI: "https://${SERVICE_FQDN}/oauth2-callback"

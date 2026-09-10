@@ -24,7 +24,7 @@ export const GET = async (req: Request, res: Response) => {
     checks.expectedNonce = session.oidcNonce;
   }
 
-  const tokens = await client.authorizationCodeGrant(oidc, currentUrl(req), checks);
+  const tokens = await exchangeCode(oidc, currentUrl(req), checks);
   const { access_token, id_token, refresh_token } = tokens;
   const claims = tokens.claims();
   if (!claims || typeof claims.sub !== "string") {
@@ -60,6 +60,38 @@ export const GET = async (req: Request, res: Response) => {
 
   res.redirect(302, returnTo ?? landingPage(userType));
 };
+
+/**
+ * Exchange the code, and say what IDAM actually objected to if it refuses.
+ *
+ * openid-client throws `ResponseBodyError` for an OAuth error response, and the reason —
+ * `invalid_client`, `invalid_grant`, `redirect_uri_mismatch` — is on the error object, not in
+ * the stack. The starter's errorHandler logs `err.stack`, so without this the pod log reads
+ *
+ *     Error: ResponseBodyError: server responded with an error in the response body
+ *         at checkOAuthBodyError (...)
+ *
+ * and nothing else: a sign-in that fails for a nameable, fixable reason, reported as an
+ * anonymous 500. It cost an afternoon once, on a missing client_secret.
+ *
+ * The description is logged, not rendered: it is IDAM's own wording and may name the client.
+ */
+async function exchangeCode(
+  oidc: client.Configuration,
+  url: URL,
+  checks: Parameters<typeof client.authorizationCodeGrant>[2]
+): Promise<Awaited<ReturnType<typeof client.authorizationCodeGrant>>> {
+  try {
+    return await client.authorizationCodeGrant(oidc, url, checks);
+  } catch (caught) {
+    const oauthError = caught as { error?: string; error_description?: string };
+    if (oauthError?.error) {
+      console.error(`IDAM rejected the token exchange: ${oauthError.error} — ${oauthError.error_description ?? "no description"}`);
+      throw new Error(`IDAM token exchange failed: ${oauthError.error}`, { cause: caught });
+    }
+    throw caught;
+  }
+}
 
 function currentUrl(req: Request): URL {
   const protocol = req.protocol;
