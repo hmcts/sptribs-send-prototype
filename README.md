@@ -163,16 +163,6 @@ for PR builds, so IDAM and S2S are the real AAT ones while CCD is the case-api P
 
 You need the HMCTS VPN to reach a preview URL.
 
-### Running the journey against Preview
-
-```bash
-TEST_URL=https://sptribs-send-prototype-pr-<M>.preview.platform.hmcts.net yarn test:e2e
-```
-
-This is `test:functional` in the pipeline. The citizen account is created on demand through
-idam-testing-support-api's burner endpoint; `CITIZEN_EMAIL` / `CITIZEN_PASSWORD` use one of
-your own instead. See `test/e2e/helpers/citizen.ts`.
-
 The case-api chart's `global.idamApiUrl` must be `idam-api`, not `idam-web-public`, or the CCD
 submit fails — ccd-data-store resolves the acting user with `GET /api/v1/users/{id}`, which
 only idam-api routes.
