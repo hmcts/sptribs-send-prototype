@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { citizenFor } from "./citizen.js";
 import { submitIdamLogin } from "./login.js";
 
 /**
@@ -9,7 +10,13 @@ import { submitIdamLogin } from "./login.js";
  * it as an argument and the spec's own name says which branch it is walking.
  */
 
-export const CITIZEN = "TEST_CITIZEN_USER@mailinator.com";
+/**
+ * The citizen this run signs in as.
+ *
+ * Resolved from the base URL, not hard-coded: locally it is the user cftlib's IDAM simulator
+ * seeds, and against a deployed environment it is a burner user created on demand. See
+ * citizen.ts.
+ */
 
 export async function startAsParent(page: Page): Promise<void> {
   await page.goto("/");
@@ -47,7 +54,8 @@ export async function dismissCookieBanner(page: Page): Promise<void> {
 
 /** Sign in, from wherever the first protected page sent an anonymous visitor. */
 export async function signInAsCitizen(page: Page): Promise<void> {
-  await submitIdamLogin(page, CITIZEN);
+  const baseUrl = new URL(page.url()).origin;
+  await submitIdamLogin(page, await citizenFor(baseUrl));
 }
 
 export async function fillText(page: Page, label: string, value: string): Promise<void> {

@@ -44,8 +44,10 @@ test.describe("the appeal journey", () => {
   test("should send an anonymous visitor to sign in at the first question about the appeal", async ({ page }) => {
     await page.goto("/appeal/task-list");
 
-    // The IDAM simulator's own login form.
-    await expect(page.locator('input[name="username"]')).toBeVisible();
+    // Asserted on the host, not on IDAM's markup: the simulator and real IDAM serve
+    // different forms, and either is a correct outcome here. What matters is that the
+    // app handed off rather than showing the task list to somebody anonymous.
+    await expect(page).toHaveURL(/idam-web-public|localhost:5062/);
   });
 
   test("should turn a young person under compulsory school age away, and say why", async ({ page }) => {
