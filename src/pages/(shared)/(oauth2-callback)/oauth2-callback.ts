@@ -114,10 +114,31 @@ function claimMismatch(caught: unknown): string | undefined {
   return `${cause.claim} was ${JSON.stringify(actual)}, expected ${JSON.stringify(cause.expected)}`;
 }
 
-function currentUrl(req: Request): URL {
+export function currentUrl(req: Request): URL {
   const protocol = req.protocol;
   const host = req.get("host");
-  return new URL(req.originalUrl, `${protocol}://${host}`);
+  const url = new URL(req.originalUrl, `${protocol}://${host}`);
+
+  // IDAM reports two different issuers, and openid-client validates both against the one
+  // configured issuer — so no single value can satisfy them:
+  //
+  //   the `iss` query parameter here  → https://idam-web-public.aat.platform.hmcts.net/o
+  //   the `iss` claim in the id_token → https://forgerock-am.…internal:8443/openam/…
+  //
+  // The client is configured with the second (see reconcileIssuer), because that is the one
+  // signed into every token. This one then fails `validateAuthResponse` with the anonymous
+  // "invalid response encountered", before any token request is made.
+  //
+  // Dropping this parameter rather than the claim check is the safe side of the trade. This is
+  // an unsigned URL parameter — anyone who can craft the callback can set it — and its purpose
+  // (RFC 9207) is to stop a mix-up between *several* issuers, which cannot arise here: exactly
+  // one is configured, and openid-client is not asked to discover it from the response. The
+  // id_token's `iss` is signed, verified against the JWKS, and still enforced.
+  //
+  // IDAM does not advertise `authorization_response_iss_parameter_supported`, so openid-client
+  // does not require the parameter to be present — it only objects to it disagreeing.
+  url.searchParams.delete("iss");
+  return url;
 }
 
 function readRoles(userInfo: client.UserInfoResponse, claims: Record<string, unknown>): string[] {
