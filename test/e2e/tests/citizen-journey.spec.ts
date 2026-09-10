@@ -165,6 +165,12 @@ test.describe("the appeal journey", () => {
   });
 
   test("should send a completed appeal to CCD and give the citizen its reference", async ({ page }) => {
+    // The one test that answers every question, so it is the one test the default 30 seconds
+    // does not fit: 50-odd navigations, three axe scans and a real round trip to CCD. Against a
+    // deployed environment each navigation is a network hop rather than localhost. Raised here
+    // rather than in the config so the other specs keep a timeout tight enough to be useful.
+    test.setTimeout(180_000);
+
     await completeAppeal(page);
 
     await page.goto("/appeal/check-answers");

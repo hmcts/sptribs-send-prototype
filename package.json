@@ -43,9 +43,9 @@
     "test:a11y": "vitest run --config vitest.a11y.config.ts",
     "test:e2e": "playwright test --config test/e2e/playwright.config.ts",
     "test:smoke": "playwright install --with-deps chromium && playwright test --config test/e2e/playwright.config.ts test/e2e/tests/smoke.spec.ts",
-    "test:functional": "echo 'The authenticated journey runs against the local cftlib stack — yarn test:e2e. Preview signs in against real AAT IDAM, which needs an AAT citizen test user this suite does not create; see README.md.' && exit 0",
-    "test:fullfunctional": "echo 'The authenticated journey runs against the local cftlib stack — yarn test:e2e. Preview signs in against real AAT IDAM, which needs an AAT citizen test user this suite does not create; see README.md.' && exit 0",
-    "test:crossbrowser": "echo 'The authenticated journey runs against the local cftlib stack — yarn test:e2e. Preview signs in against real AAT IDAM, which needs an AAT citizen test user this suite does not create; see README.md.' && exit 0",
+    "test:functional": "playwright install --with-deps chromium && playwright test --config test/e2e/playwright.config.ts",
+    "test:fullfunctional": "playwright install --with-deps chromium && playwright test --config test/e2e/playwright.config.ts",
+    "test:crossbrowser": "echo 'Chromium only: this is a prototype and one engine is the honest scope. The journey is Design System components with no bespoke JS, so a second engine would mostly re-test govuk-frontend.' && exit 0",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write ."
