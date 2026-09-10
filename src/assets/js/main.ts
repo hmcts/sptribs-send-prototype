@@ -27,9 +27,16 @@ function initCookieBanner(): void {
     if (analyticsAccepted) {
       body.set("analytics", "on");
     }
-    await fetch("/cookies/save-preferences", {
+    // POST /cookies — the same route the preferences page submits to. The token comes from the
+    // meta tag in _layouts/citizen.njk, because csrf() checks every unsafe request at app level
+    // and the banner's markup (the starter's) has no field to carry one.
+    const token = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+    await fetch("/cookies", {
       method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        ...(token ? { "x-csrf-token": token } : {})
+      },
       body
     }).catch(() => {
       // Best-effort: if the save fails the banner stays; nothing is broken.

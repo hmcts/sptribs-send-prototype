@@ -6,6 +6,16 @@
   {% if title %}{{ title }} - {% endif %}{{ serviceName }} - GOV.UK
 {% endblock %}
 
+{# The CSRF token, for the cookie banner's Accept/Reject buttons. They post with fetch rather
+   than a form (so the page does not navigate away mid-journey), and csrf() checks every unsafe
+   request at app level — so they need the token without a form field to carry it. The banner's
+   own markup comes from the starter and cannot be edited to include one.
+   Safe to expose: the token is derived from the session secret, not the secret itself. #}
+{% block head %}
+  {{ super() }}
+  <meta name="csrf-token" content="{{ csrfToken }}">
+{% endblock %}
+
 {# GOV.UK crest bar + a service-navigation row carrying the service name and,
    when signed in, a Sign out link to /logout (the OIDC logout route).
    isSignedIn is set per-request by setUser(). The Sign out link is pushed to
