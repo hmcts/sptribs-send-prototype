@@ -4,33 +4,72 @@ import { type Citizen, isDeployed } from "./citizen.js";
 /**
  * Sign in, against whichever IDAM the suite is pointed at.
  *
- * The two are not the same page. cftlib's simulator is a bare form with
- * `input[name=username]` and a submit button. Real IDAM serves "Sign in or create an
- * account", where the fields are `#username`/`#password` and the button is
- * `input[value="Sign in"]` — selectors taken from `sptribs-e2etests`
- * (`src/tests/helpers/idamLoginHelper.ts`), which signs into the same IDAM for the
- * sibling services, rather than guessed.
+ * The two are not the same journey, and this is the part most likely to break when IDAM
+ * changes — so it is written from what the pages actually serve, probed against AAT, rather
+ * than from another repo's selectors.
  *
- * Both are tried in turn, so one helper covers a local run and a deployed one. Which
- * page appeared is not asserted: it is another team's markup and a restyle should not
- * fail this suite.
+ * **cftlib's simulator** is a single bare form: `input[name=username]`, `input[name=password]`,
+ * submit.
+ *
+ * **Real IDAM** is three pages, which is why the older single-form selectors miss it
+ * entirely:
+ *
+ *   /sign-in-or-create   "Sign in" (a link to /enter-email) or "Create account"
+ *   /enter-email         #email    → Continue
+ *   /enter-password      #password → Continue
+ *
+ * That first page is the "Sign in or create an account" interstitial — it has no username
+ * field at all, so a helper that goes straight for one times out on a page that is working
+ * perfectly.
  */
 export async function submitIdamLogin(page: Page, citizen: Citizen): Promise<void> {
+  // The simulator, when the whole form is on one page.
   const simulatorUsername = page.locator('input[name="username"]');
-  const idamUsername = page.locator("#username");
-
-  // Real IDAM first: its form is the one that changes, and it renders the heading before
-  // the inputs are interactive.
-  if (await idamUsername.isVisible().catch(() => false)) {
-    await idamUsername.fill(citizen.email);
-    await page.locator("#password").fill(citizen.password);
-    await page.locator('input[value="Sign in"], button[type="submit"]').first().click();
+  if (await simulatorUsername.isVisible().catch(() => false)) {
+    await simulatorUsername.fill(citizen.email);
+    await page.locator('input[name="password"]').fill(citizen.password);
+    await page.locator('button[type="submit"]').click();
     return;
   }
 
-  await simulatorUsername.fill(citizen.email);
-  await page.locator('input[name="password"]').fill(citizen.password);
-  await page.locator('button[type="submit"]').click();
+  await signInThroughIdam(page, citizen);
+}
+
+/**
+ * Real IDAM's three-page sign-in.
+ *
+ * The interstitial is skipped when the browser is already past it — landing straight on
+ * /enter-email happens when IDAM remembers the choice — so each step is entered only if its
+ * own field is on the page.
+ */
+async function signInThroughIdam(page: Page, citizen: Citizen): Promise<void> {
+  // Located by href rather than by name: "Sign in" also appears in the page's own chrome,
+  // which makes a by-name lookup ambiguous under strict mode.
+  const signIn = page.locator('a[href="/enter-email"]');
+  if (
+    await signIn
+      .first()
+      .isVisible()
+      .catch(() => false)
+  ) {
+    await signIn.first().click();
+    await page.waitForLoadState("domcontentloaded");
+  }
+
+  const email = page.locator("#email:not([type=hidden])");
+  if (
+    await email
+      .first()
+      .isVisible()
+      .catch(() => false)
+  ) {
+    await email.first().fill(citizen.email);
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.waitForLoadState("domcontentloaded");
+  }
+
+  await page.locator("#password").fill(citizen.password);
+  await page.getByRole("button", { name: "Continue" }).click();
 }
 
 /**
