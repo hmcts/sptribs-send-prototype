@@ -3,7 +3,7 @@ export default {
   phase: "beta",
   back: "Yn ôl",
   continue: "Parhau",
-  save: "Cadw a pharhau",
+  save: "Next",
   submit: "Accept and submit your appeal",
   cancel: "Canslo",
   signOut: "Allgofnodi",

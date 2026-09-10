@@ -64,7 +64,7 @@ export async function fillDate(page: Page, legend: string, date: { day: string; 
 /** Submit the page and wait for the redirect that follows a valid answer. */
 export async function submit(page: Page): Promise<void> {
   await page
-    .getByRole("button", { name: /Save and continue|Continue|Accept and send|Add this evidence/ })
+    .getByRole("button", { name: /^Next$|Continue|Accept and send|Add this evidence/ })
     .first()
     .click();
 }

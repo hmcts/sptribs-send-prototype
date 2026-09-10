@@ -3,7 +3,7 @@ export default {
   phase: "beta",
   back: "Back",
   continue: "Continue",
-  save: "Save and continue",
+  save: "Next",
   submit: "Accept and submit your appeal",
   cancel: "Cancel",
   signOut: "Sign out",
