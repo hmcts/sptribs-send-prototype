@@ -103,6 +103,10 @@ const postHandler = async (req: Request, res: Response) => {
     res.redirect(302, NEXT);
   } catch (error) {
     if (error instanceof CcdError) {
+      // Logged, because the citizen's page cannot say why and this is the only record that the
+      // submission was attempted at all. Without it a failed submit leaves nothing in the pod
+      // log and the investigation starts from "it just says it was not sent".
+      console.error(`CCD refused the appeal (status ${error.status}): ${error.message}`);
       // The draft is untouched, so Try again resubmits exactly what they confirmed.
       return res.status(502).render("_errors/submission-failed", { title: "Your appeal was not sent", tryAgainHref: "/appeal/declaration" });
     }

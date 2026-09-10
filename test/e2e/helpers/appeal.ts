@@ -75,11 +75,19 @@ export async function submit(page: Page): Promise<void> {
     .getByRole("button", { name: /^Next$|Continue|Accept and send|Add this evidence/ })
     .first()
     .click();
+
+  // Waited for, because every caller's next act is to read or fill the page that follows. Each
+  // submit is a POST-then-redirect, so without this a `getByLabel(...).fill()` can run against
+  // the *previous* page — the field is not there yet, and the test fails 30 seconds later on a
+  // screenshot of a page caught half-rendered. Playwright's auto-waiting does not cover it: it
+  // waits for a locator to appear, not for a navigation it was never told about.
+  await page.waitForLoadState("domcontentloaded");
 }
 
 export async function goToTask(page: Page, name: string): Promise<void> {
   await page.goto("/appeal/task-list");
   await page.getByRole("link", { name }).click();
+  await page.waitForLoadState("domcontentloaded");
 }
 
 export async function expectTaskComplete(page: Page, name: string): Promise<void> {

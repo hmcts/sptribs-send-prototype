@@ -36,6 +36,14 @@ export function citizenFor(baseUrl: string): Promise<Citizen> {
   if (!isDeployed(baseUrl)) {
     return Promise.resolve(SIMULATOR_CITIZEN);
   }
+
+  // An explicit user wins, and for the submission test it is required — see the note on
+  // CITIZEN_EMAIL below.
+  const email = process.env.CITIZEN_EMAIL;
+  if (email) {
+    return Promise.resolve({ email, password: process.env.CITIZEN_PASSWORD ?? "Pa55word11" });
+  }
+
   deployedCitizen ??= createBurnerCitizen(environmentFrom(baseUrl));
   return deployedCitizen;
 }

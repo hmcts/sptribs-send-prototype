@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { type Citizen, isDeployed } from "./citizen.js";
 
 /**
@@ -23,7 +23,9 @@ import { type Citizen, isDeployed } from "./citizen.js";
  * perfectly.
  */
 export async function submitIdamLogin(page: Page, citizen: Citizen): Promise<void> {
-  // The simulator, when the whole form is on one page.
+  // The simulator, when the whole form is on one page. `isVisible()` is safe here only because
+  // a missing field means "this is real IDAM", which the fallback then handles — see the note
+  // on waiting in signInThroughIdam.
   const simulatorUsername = page.locator('input[name="username"]');
   if (await simulatorUsername.isVisible().catch(() => false)) {
     await simulatorUsername.fill(citizen.email);
@@ -38,38 +40,94 @@ export async function submitIdamLogin(page: Page, citizen: Citizen): Promise<voi
 /**
  * Real IDAM's three-page sign-in.
  *
- * The interstitial is skipped when the browser is already past it — landing straight on
- * /enter-email happens when IDAM remembers the choice — so each step is entered only if its
- * own field is on the page.
+ * Which page you are on is decided by *waiting* for one of the possibilities, never by asking
+ * `isVisible()` and moving on. That distinction is the whole reliability of this helper.
+ * `isVisible()` answers immediately about the DOM as it stands: race it against a page still
+ * loading and it says false for an element that is about to exist, the step is skipped, and the
+ * failure lands further down as a 30-second timeout filling a field on a page that never got
+ * its click. That produced a suite where four tests failed, passed on rerun, and moved between
+ * runs — with screenshots showing a page that looked perfectly fine.
+ *
+ * The interstitial is also genuinely skippable: IDAM remembers the choice and sends a returning
+ * browser straight to /enter-email. So the states are raced against each other rather than
+ * assumed in sequence.
  */
 async function signInThroughIdam(page: Page, citizen: Citizen): Promise<void> {
   // Located by href rather than by name: "Sign in" also appears in the page's own chrome,
   // which makes a by-name lookup ambiguous under strict mode.
   const signIn = page.locator('a[href="/enter-email"]');
+  const email = page.locator("#email:not([type=hidden])");
+  const password = page.locator("#password");
+
+  // Either the interstitial or, for a returning browser, the email page.
+  await Promise.race([expectVisible(signIn), expectVisible(email), expectVisible(password)]);
+
   if (
     await signIn
       .first()
       .isVisible()
       .catch(() => false)
   ) {
+    await dismissIdamCookieBanner(page);
     await signIn.first().click();
-    await page.waitForLoadState("domcontentloaded");
+    await expectVisible(email);
   }
 
-  const email = page.locator("#email:not([type=hidden])");
   if (
     await email
       .first()
       .isVisible()
       .catch(() => false)
   ) {
+    await dismissIdamCookieBanner(page);
     await email.first().fill(citizen.email);
     await page.getByRole("button", { name: "Continue" }).click();
-    await page.waitForLoadState("domcontentloaded");
+    await expectVisible(password);
   }
 
-  await page.locator("#password").fill(citizen.password);
+  await dismissIdamCookieBanner(page);
+  await password.fill(citizen.password);
   await page.getByRole("button", { name: "Continue" }).click();
+}
+
+/** Wait for a locator to be visible, resolving false rather than throwing when it never is. */
+async function expectVisible(locator: Locator): Promise<boolean> {
+  return locator
+    .first()
+    .waitFor({ state: "visible", timeout: 15_000 })
+    .then(() => true)
+    .catch(() => false);
+}
+
+/**
+ * Dismiss IDAM's cookie banner, which is not the service's own.
+ *
+ * IDAM is a separate application on a separate domain (`hmcts-access.service.gov.uk` branding,
+ * served from `idam-web-public…`), so dismissing the service's banner does nothing for this
+ * one. Its wording differs too — "Reject additonal cookies", including IDAM's own typo — so it
+ * is matched loosely rather than by exact text, which would break when that is fixed.
+ */
+async function dismissIdamCookieBanner(page: Page): Promise<void> {
+  // Located by id, not by text: the visible label is "Reject additonal cookies" — IDAM's own
+  // typo — so matching on wording breaks whenever they fix it.
+  const reject = page.locator("#reject-additional-cookies");
+  if (!(await reject.isVisible().catch(() => false))) {
+    return;
+  }
+  await reject.click();
+
+  // Rejecting reveals #cookie-confirmation, which is another banner in the same place. It keeps
+  // covering the buttons underneath until its own hide button is used.
+  const hide = page.locator("#hide-cookie-banner, #cookie-confirmation button").first();
+  await hide.waitFor({ state: "visible", timeout: 2000 }).catch(() => undefined);
+  if (await hide.isVisible().catch(() => false)) {
+    await hide.click();
+  }
+  await page
+    .locator("#cookie-banner, #cookie-confirmation")
+    .first()
+    .waitFor({ state: "hidden", timeout: 2000 })
+    .catch(() => undefined);
 }
 
 /**
