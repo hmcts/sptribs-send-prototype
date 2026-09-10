@@ -92,10 +92,43 @@ describe("setupOidcClient against the local simulator", () => {
   });
 });
 
-const simulatorReachable = () =>
-  fetch("http://localhost:5062/o/.well-known/openid-configuration")
-    .then((r) => r.ok)
-    .catch(() => false);
+/**
+ * Whether there is a *usable* IDAM simulator on 5062 — one that will actually mint a token for
+ * this test's client, not merely something answering on the port.
+ *
+ * The weaker check (does discovery respond?) made these tests environment-dependent in the
+ * worst way: they passed on a CI agent with nothing on 5062 by skipping, and failed on an agent
+ * where some other project's stack held the port and refused this client. A test that depends on
+ * what else happens to be running is worse than one that is skipped, because the failure looks
+ * like the code under test.
+ *
+ * So the probe is the operation the tests need. If it cannot mint a token, there is no simulator
+ * here as far as these tests are concerned, whatever is listening.
+ */
+const simulatorReachable = async (): Promise<boolean> => {
+  try {
+    const discovery = await fetch("http://localhost:5062/o/.well-known/openid-configuration");
+    if (!discovery.ok) {
+      return false;
+    }
+    // Same grant assertedIssuer() uses, so this proves exactly the capability under test.
+    const token = await fetch("http://localhost:5062/o/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "password",
+        client_id: "sptribs-send-prototype",
+        client_secret: "sptribs-send-prototype-idam-secret",
+        username: "issuer-probe@send.local",
+        password: "probe",
+        scope: "openid profile roles"
+      })
+    });
+    return token.ok;
+  } catch {
+    return false;
+  }
+};
 
 /** The `iss` the simulator actually mints, read out of a real id_token. */
 async function simulatorTokenIssuer(): Promise<string> {
