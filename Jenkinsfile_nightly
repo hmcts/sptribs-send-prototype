@@ -1,0 +1,52 @@
+#!groovy
+
+properties([
+  pipelineTriggers([cron('H 07 * * 1-5')]),
+  parameters([
+    choice(name: 'ENVIRONMENT', choices: ['aat', 'preview'], description: 'Environment to run the test.'),
+    string(name: 'PR_NUMBER', defaultValue: '', description: 'PR number (REQUIRED if environment is preview).')
+  ])
+])
+
+@Library("Infrastructure")
+
+def type = "nodejs"
+def product = "sptribs"
+def component = "send-prototype"
+
+static Map<String, Object> secret(String secretName, String envVariable) {
+  [
+    $class: 'AzureKeyVaultSecret',
+    secretType: 'Secret',
+    name: secretName,
+    envVariable: envVariable
+  ]
+}
+
+def secrets = [
+  'sptribs-${env}': [
+    secret('idam-ui-secret',      'OIDC_CLIENT_SECRET'),
+    secret('s2s-case-api-secret', 'S2S_SECRET')
+  ]
+]
+
+withNightlyPipeline(type, product, component) {
+  validateInputs()
+  loadVaultSecrets(secrets)
+
+  env.TEST_URL = (params.ENVIRONMENT == 'preview')
+    ? "https://sptribs-send-prototype-pr-${params.PR_NUMBER}.preview.platform.hmcts.net"
+    : "https://sptribs-send-prototype.${params.ENVIRONMENT}.platform.hmcts.net/"
+
+  enableFortifyScan()
+
+  afterAlways('fortify-scan') {
+    steps.archiveArtifacts allowEmptyArchive: true, artifacts: '**/Fortify Scan/**/*'
+  }
+}
+
+def validateInputs() {
+  if (params.ENVIRONMENT == 'preview' && (!params.PR_NUMBER?.trim() || !params.PR_NUMBER.trim().matches('^\\d+$'))) {
+    error("PR_NUMBER must be a numeric string when ENVIRONMENT is 'preview'")
+  }
+}

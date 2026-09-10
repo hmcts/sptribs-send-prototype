@@ -1,0 +1,119 @@
+{% extends "_layouts/citizen.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/character-count/macro.njk" import govukCharacterCount %}
+{% from "govuk/components/date-input/macro.njk" import govukDateInput %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: back, href: backHref }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% if errors | length %}
+        {{ govukErrorSummary({ titleText: errorSummaryTitle, errorList: errors | govukErrorSummary }) }}
+      {% endif %}
+
+      <span class="govuk-caption-l">{{ caption }}</span>
+      <h1 class="govuk-heading-l">{{ title }}</h1>
+      <p class="govuk-body-l">{{ lede }}</p>
+      <p class="govuk-body">{{ optional }}</p>
+
+      <h2 class="govuk-heading-m">{{ addedHeading }}</h2>
+      {% if rows | length %}
+        {# A table rather than a summary list: each row needs a Remove button, and
+           govukSummaryList actions have to be links. A button is right here — removing
+           evidence changes state, so it is a POST. #}
+        <form method="post" novalidate>
+          {% include "_partials/csrf-input.njk" %}
+          <table class="govuk-table">
+            <caption class="govuk-visually-hidden">{{ addedHeading }}</caption>
+            <thead class="govuk-table__head">
+              <tr class="govuk-table__row">
+                <th scope="col" class="govuk-table__header">{{ evidenceDescriptionLabel }}</th>
+                <th scope="col" class="govuk-table__header">{{ signedByLabel }}</th>
+                <th scope="col" class="govuk-table__header"><span class="govuk-visually-hidden">{{ remove }}</span></th>
+              </tr>
+            </thead>
+            <tbody class="govuk-table__body">
+              {% for row in rows %}
+                <tr class="govuk-table__row">
+                  <td class="govuk-table__cell">{{ row.description }}</td>
+                  <td class="govuk-table__cell">{{ row.detail }}</td>
+                  <td class="govuk-table__cell">
+                    {{ govukButton({
+                      text: remove,
+                      name: "remove",
+                      value: loop.index0,
+                      classes: "govuk-button--secondary govuk-!-margin-bottom-0",
+                      attributes: { "aria-label": remove + ": " + row.description }
+                    }) }}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </form>
+      {% else %}
+        <p class="govuk-body">{{ noneAdded }}</p>
+      {% endif %}
+
+      <form method="post" novalidate>
+        {% include "_partials/csrf-input.njk" %}
+        <h2 class="govuk-heading-m">{{ addHeading }}</h2>
+
+        {{ govukCharacterCount({
+          id: "evidenceDescription",
+          name: "evidenceDescription",
+          value: values.evidenceDescription,
+          maxlength: 500,
+          rows: 3,
+          label: { text: evidenceDescriptionLabel, classes: "govuk-label--s" },
+          hint: { text: evidenceDescriptionHint },
+          errorMessage: { text: errors.evidenceDescription } if errors.evidenceDescription
+        }) }}
+
+        {{ govukInput({
+          id: "signedBy",
+          name: "signedBy",
+          value: values.signedBy,
+          label: { text: signedByLabel, classes: "govuk-label--s" },
+          hint: { text: signedByHint },
+          errorMessage: { text: errors.signedBy } if errors.signedBy
+        }) }}
+
+        {{ govukDateInput({
+          id: "documentDate",
+          namePrefix: "documentDate",
+          fieldset: { legend: { text: documentDateLabel, classes: "govuk-fieldset__legend--s" } },
+          hint: { text: documentDateHint },
+          items: [
+            { name: "day", classes: "govuk-input--width-2", value: values["documentDate-day"] },
+            { name: "month", classes: "govuk-input--width-2", value: values["documentDate-month"] },
+            { name: "year", classes: "govuk-input--width-4", value: values["documentDate-year"] }
+          ],
+          errorMessage: { text: errors.documentDate } if errors.documentDate
+        }) }}
+
+        {{ govukInput({
+          id: "pageCount",
+          name: "pageCount",
+          value: values.pageCount,
+          classes: "govuk-input--width-5",
+          label: { text: pageCountLabel, classes: "govuk-label--s" },
+          errorMessage: { text: errors.pageCount } if errors.pageCount
+        }) }}
+
+        {{ govukButton({ text: addAnother, classes: "govuk-button--secondary" }) }}
+      </form>
+
+      <form method="post" novalidate>
+        {% include "_partials/csrf-input.njk" %}
+        {{ govukButton({ text: continueText, name: "continue", value: "true" }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}
