@@ -165,38 +165,17 @@ You need the HMCTS VPN to reach a preview URL.
 
 ### Running the journey against Preview
 
-The full suite runs against a deployed environment, sign-in and all:
-
 ```bash
 TEST_URL=https://sptribs-send-prototype-pr-<M>.preview.platform.hmcts.net yarn test:e2e
 ```
 
-No test account to set up: it creates one through idam-testing-support-api's **burner**
-endpoint, which is unauthenticated (no Azure login, no Key Vault) and so works from a Jenkins
-agent. Burner users last about 15 minutes, and one is shared per run because the endpoint is
-rate limited to one per three minutes. `CITIZEN_EMAIL` / `CITIZEN_PASSWORD` override that with
-an account of your own — useful when a failure might be about the user rather than the journey,
-which is exactly how the `idamApiUrl` misconfiguration below was pinned down.
+This is `test:functional` in the pipeline. The citizen account is created on demand through
+idam-testing-support-api's burner endpoint; `CITIZEN_EMAIL` / `CITIZEN_PASSWORD` use one of
+your own instead. See `test/e2e/helpers/citizen.ts`.
 
-This is `test:functional` in the pipeline, so a Preview deploy that cannot be signed into now
-fails the build. It used to be a stub, which is how a deployment that served every page and
-passed its healthcheck sat there for a day with sign-in broken.
-
-Two things about real IDAM are worth knowing before debugging a sign-in here, because neither
-is guessable and both look like a bug in this app:
-
-- **It signs a different issuer than it advertises.** Discovery says
-  `idam-web-public.aat…/o`; every token carries the internal ForgeRock hostname. `libs/oidc`
-  asks the token endpoint which one it signs and expects that. See `reconcileIssuer`.
-- **The `iss` on the callback disagrees with the `iss` in the id_token** — the first is the
-  public host, the second is the internal one. No single configured issuer satisfies both, so
-  the unsigned query parameter is dropped and the signed claim is enforced. See
-  `(oauth2-callback)`.
-
-Sign-in reaching CCD is a separate matter again: `global.idamApiUrl` in the **case-api** chart
-has to be `idam-api`, not `idam-web-public`. ccd-data-store resolves the acting user with
-`GET /api/v1/users/{id}`, which idam-web-public does not route — the create fails with a 500
-and the citizen is told only that their appeal was not sent.
+The case-api chart's `global.idamApiUrl` must be `idam-api`, not `idam-web-public`, or the CCD
+submit fails — ccd-data-store resolves the acting user with `GET /api/v1/users/{id}`, which
+only idam-api routes.
 
 ## Licence
 
