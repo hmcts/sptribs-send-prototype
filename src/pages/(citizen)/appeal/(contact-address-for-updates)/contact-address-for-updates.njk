@@ -1,0 +1,72 @@
+{% extends "_layouts/citizen.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/fieldset/macro.njk" import govukFieldset %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: back, href: backHref }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% if errors | length %}
+        {{ govukErrorSummary({ titleText: errorSummaryTitle, errorList: errors | govukErrorSummary }) }}
+      {% endif %}
+
+      <form method="post" novalidate>
+        {% include "_partials/csrf-input.njk" %}
+        <span class="govuk-caption-l">{{ caption }}</span>
+
+        {% call govukFieldset({ legend: { text: addressLabel, isPageHeading: true, classes: "govuk-fieldset__legend--l" } }) %}
+          {{ govukInput({
+            id: "address-addressLine1",
+            name: "address[addressLine1]",
+            value: values.address["addressLine1"],
+            autocomplete: "address-line1",
+            label: { text: "Address line 1" },
+            errorMessage: { text: errors.addressAddressLine1 } if errors.addressAddressLine1
+          }) }}
+          {{ govukInput({
+            id: "address-addressLine2",
+            name: "address[addressLine2]",
+            value: values.address["addressLine2"],
+            autocomplete: "address-line2",
+            label: { text: "Address line 2 (optional)" },
+            errorMessage: { text: errors.addressAddressLine2 } if errors.addressAddressLine2
+          }) }}
+          {{ govukInput({
+            id: "address-townOrCity",
+            name: "address[townOrCity]",
+            value: values.address["townOrCity"],
+            classes: "govuk-!-width-two-thirds",
+            autocomplete: "address-level2",
+            label: { text: "Town or city" },
+            errorMessage: { text: errors.addressTownOrCity } if errors.addressTownOrCity
+          }) }}
+          {{ govukInput({
+            id: "address-county",
+            name: "address[county]",
+            value: values.address["county"],
+            classes: "govuk-!-width-two-thirds",
+            label: { text: "County (optional)" },
+            errorMessage: { text: errors.addressCounty } if errors.addressCounty
+          }) }}
+          {{ govukInput({
+            id: "address-postcode",
+            name: "address[postcode]",
+            value: values.address["postcode"],
+            classes: "govuk-input--width-10",
+            autocomplete: "postal-code",
+            label: { text: "Postcode" },
+            errorMessage: { text: errors.addressPostcode } if errors.addressPostcode
+          }) }}
+        {% endcall %}
+
+        {{ govukButton({ text: continueText or save }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

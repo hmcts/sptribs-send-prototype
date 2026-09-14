@@ -1,0 +1,48 @@
+#!groovy
+
+@Library("Infrastructure")
+
+def type = "nodejs"
+def product = "sptribs"
+def component = "send-prototype"
+
+static Map<String, Object> secret(String secretName, String envVariable) {
+  [
+    $class: 'AzureKeyVaultSecret',
+    secretType: 'Secret',
+    name: secretName,
+    envVariable: envVariable
+  ]
+}
+
+// Reused secrets, not new ones. The prototype signs in with the existing
+// sptribs-frontend IDAM client (idam-ui-secret) and calls CCD as the existing
+// sptribs_case_api microservice (s2s-case-api-secret), which is already in the data
+// store's authorised-services list. See README.md, "Prototype-only shortcuts".
+def secrets = [
+  'sptribs-${env}': [
+    secret('idam-ui-secret',                 'OIDC_CLIENT_SECRET'),
+    secret('s2s-case-api-secret',            'S2S_SECRET'),
+    secret('app-insights-connection-string', 'APPLICATIONINSIGHTS_CONNECTION_STRING')
+  ]
+]
+
+withPipeline(type, product, component) {
+  loadVaultSecrets(secrets)
+  enableSlackNotifications('#special-tribunals-builds')
+
+  onPR() {
+    // The sptribs-case-api PR whose Preview stack carries the StSend35 case type.
+    // Its ccd-data-store-api is reached by in-cluster DNS — both releases deploy into
+    // the sptribs namespace — and the pipeline's envsubst puts this into
+    // values.preview.template.yaml. Update it when you point the prototype at a
+    // different case-api PR.
+    env.CASE_API_PR = "2642"
+
+    env.TEST_URL = "https://sptribs-send-prototype-pr-${CHANGE_ID}.preview.platform.hmcts.net"
+  }
+
+  onMaster() {
+    env.TEST_URL = "https://sptribs-send-prototype.aat.platform.hmcts.net/"
+  }
+}

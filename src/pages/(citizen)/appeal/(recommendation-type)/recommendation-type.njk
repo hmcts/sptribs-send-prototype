@@ -1,0 +1,44 @@
+{% extends "_layouts/citizen.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: back, href: backHref }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% if errors | length %}
+        {{ govukErrorSummary({ titleText: errorSummaryTitle, errorList: errors | govukErrorSummary }) }}
+      {% endif %}
+
+      <form method="post" novalidate>
+        {% include "_partials/csrf-input.njk" %}
+        <span class="govuk-caption-l">{{ caption }}</span>
+
+        {% set recommendationTypesItems = [] %}
+        {% for option in recommendationTypesOptions %}
+          {% set _ = recommendationTypesItems.push({
+            value: option.value,
+            text: option.text,
+            hint: { text: option.hint } if option.hint,
+            checked: option.value in values.recommendationTypes
+          }) %}
+        {% endfor %}
+        {{ govukCheckboxes({
+          name: "recommendationTypes",
+          idPrefix: "recommendationTypes",
+          fieldset: { legend: { text: recommendationTypesLabel, isPageHeading: true, classes: "govuk-fieldset__legend--l" } },
+          hint: { text: recommendationTypesHint },
+          items: recommendationTypesItems,
+          errorMessage: { text: errors.recommendationTypes } if errors.recommendationTypes
+        }) }}
+
+        {{ govukButton({ text: continueText or save }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

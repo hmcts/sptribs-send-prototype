@@ -1,0 +1,28 @@
+{% extends "_layouts/citizen.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: back, href: backHref }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-l">{{ reason.heading }}</h1>
+
+      {% for paragraph in reason.body %}
+        <p class="govuk-body">{{ paragraph }}</p>
+      {% endfor %}
+
+      <h2 class="govuk-heading-m">{{ helpHeading }}</h2>
+      <p class="govuk-body">{{ help }}</p>
+      <p class="govuk-body">
+        Email <a class="govuk-link" href="mailto:{{ contactEmail }}">{{ contactEmail }}</a><br>
+        Telephone {{ contactPhone }}
+      </p>
+
+      {{ govukButton({ text: startAgain, href: "/" }) }}
+    </div>
+  </div>
+{% endblock %}

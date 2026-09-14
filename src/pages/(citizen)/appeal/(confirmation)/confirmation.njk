@@ -1,0 +1,29 @@
+{% extends "_layouts/citizen.njk" %}
+{% from "govuk/components/panel/macro.njk" import govukPanel %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {{ govukPanel({ titleText: panelTitle, html: panelHtml }) }}
+
+      <p class="govuk-body">{{ keepReference }}</p>
+
+      <h2 class="govuk-heading-m">{{ whatNextHeading }}</h2>
+      {% for paragraph in whatNext %}
+        <p class="govuk-body">{{ paragraph }}</p>
+      {% endfor %}
+
+      <h2 class="govuk-heading-m">{{ documentsHeading }}</h2>
+      {% for paragraph in documents %}
+        <p class="govuk-body">{{ paragraph }}</p>
+      {% endfor %}
+      <p class="govuk-body">
+        Email <a class="govuk-link" href="mailto:{{ contactEmail }}">{{ contactEmail }}</a><br>
+        Telephone {{ contactPhone }}
+      </p>
+
+      <h2 class="govuk-heading-m">{{ feedbackHeading }}</h2>
+      <p class="govuk-body">{{ feedbackPrompt }}</p>
+    </div>
+  </div>
+{% endblock %}

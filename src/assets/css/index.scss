@@ -1,0 +1,15 @@
+$govuk-assets-path: "/assets/";
+
+@import "govuk-frontend/dist/govuk/index";
+
+// Right-align account actions (Sign out) in the citizen service navigation so
+// they sit at the far end of the bar, away from the service name. The govuk
+// wrapper sets `flex-grow: 1`, so it fills the row and margin-left:auto has no
+// slack — override flex-grow and push it right. Only on tablet+ (the bar is a
+// flex row there; on mobile it stacks under a menu button). See citizen.njk.
+.send-service-navigation__account {
+  @include govuk-media-query($from: tablet) {
+    flex-grow: 0;
+    margin-left: auto;
+  }
+}

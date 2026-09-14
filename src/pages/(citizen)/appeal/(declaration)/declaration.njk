@@ -1,0 +1,88 @@
+{% extends "_layouts/citizen.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/date-input/macro.njk" import govukDateInput %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: back, href: backHref }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% if errors | length %}
+        {{ govukErrorSummary({ titleText: errorSummaryTitle, errorList: errors | govukErrorSummary }) }}
+      {% endif %}
+
+      <h1 class="govuk-heading-l">{{ heading }}</h1>
+      <p class="govuk-body">{{ lede }}</p>
+
+      <form method="post" novalidate>
+        {% include "_partials/csrf-input.njk" %}
+
+        {% set capacityItems = [] %}
+        {% for option in capacityOptions %}
+          {% set _ = capacityItems.push({ value: option.value, text: option.text, checked: option.value == values.capacity }) %}
+        {% endfor %}
+        {{ govukRadios({
+          name: "capacity",
+          idPrefix: "capacity",
+          fieldset: { legend: { text: capacityLabel, classes: "govuk-fieldset__legend--s" } },
+          items: capacityItems,
+          errorMessage: { text: errors.capacity } if errors.capacity
+        }) }}
+
+        {% set roleItems = [] %}
+        {% for option in signatoryRoleOptions %}
+          {% set _ = roleItems.push({ value: option.value, text: option.text, checked: option.value == values.signatoryRole }) %}
+        {% endfor %}
+        {{ govukRadios({
+          name: "signatoryRole",
+          idPrefix: "signatoryRole",
+          fieldset: { legend: { text: signatoryRoleLabel, classes: "govuk-fieldset__legend--s" } },
+          items: roleItems,
+          errorMessage: { text: errors.signatoryRole } if errors.signatoryRole
+        }) }}
+
+        {{ govukInput({
+          id: "fullName",
+          name: "fullName",
+          value: values.fullName,
+          autocomplete: "name",
+          label: { text: fullNameLabel, classes: "govuk-label--s" },
+          errorMessage: { text: errors.fullName } if errors.fullName
+        }) }}
+
+        {{ govukInput({
+          id: "signature",
+          name: "signature",
+          value: values.signature,
+          label: { text: signatureLabel, classes: "govuk-label--s" },
+          hint: { text: signatureHint },
+          errorMessage: { text: errors.signature } if errors.signature
+        }) }}
+
+        {{ govukDateInput({
+          id: "dateSigned",
+          namePrefix: "dateSigned",
+          fieldset: { legend: { text: dateSignedLabel, classes: "govuk-fieldset__legend--s" } },
+          hint: { text: dateSignedHint },
+          items: [
+            { name: "day", classes: "govuk-input--width-2", value: values["dateSigned-day"] },
+            { name: "month", classes: "govuk-input--width-2", value: values["dateSigned-month"] },
+            { name: "year", classes: "govuk-input--width-4", value: values["dateSigned-year"] }
+          ],
+          errorMessage: { text: errors.dateSigned } if errors.dateSigned
+        }) }}
+
+        {{ govukWarningText({ text: warning, iconFallbackText: "Warning" }) }}
+
+        {{ govukButton({ text: continueText }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

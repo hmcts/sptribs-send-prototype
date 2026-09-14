@@ -36,3 +36,16 @@ config/local-*.json
 # Helm rendered values
 charts/**/values.aat.yaml
 charts/**/values.preview.yaml
+
+# Yarn audit scratch files, written into the workspace by the pipeline's
+# yarn-audit-with-suppressions.sh. yarn-audit-known-issues itself IS committed.
+active_suppressions
+new_vulnerabilities
+unneeded_suppressions
+sorted-yarn-audit-*
+yarn-audit-result*
+yarn-audit-issues*
+yarn-audit-known-issues-formatted
+yarn-audit-known-issues-result
+prettyPrintAudit.sh
+transform-v4-to-v3-audit.cjs

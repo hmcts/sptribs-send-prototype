@@ -1,0 +1,58 @@
+redis:
+  enabled: false
+  architecture: standalone
+  master:
+    persistence:
+      enabled: false
+  auth:
+    enabled: false
+
+idam-pr:
+  enabled: false
+
+nodejs:
+  applicationPort: 3211
+  aadIdentityName: sptribs
+  ingressHost: sptribs-send-prototype.{{ .Values.global.environment }}.platform.hmcts.net
+  image: "hmctsprod.azurecr.io/sptribs/send-prototype:latest"
+  keyVaults:
+    # Reused rather than new. The prototype signs in with the existing
+    # `sptribs-frontend` IDAM client and calls CCD as the existing
+    # `sptribs_case_api` microservice, so it needs no secrets of its own — and
+    # `sptribs_case_api` is already in the data store's authorised-services list.
+    # A dedicated IDAM client and S2S microservice are the right thing for a real
+    # service; see README.md, "Prototype-only shortcuts".
+    sptribs:
+      # Every secret needs an explicit alias. getPropertiesVolumeSecrets injects each
+      # mounted file as an environment variable named after the secret's `alias`, or after
+      # the file itself when there is none — so a bare `idam-ui-secret` arrives as
+      # `process.env["idam-ui-secret"]`, which custom-environment-variables.json does not
+      # read. Nothing fails at boot; the token exchange just fails at sign-in with the
+      # client_secret missing.
+      secrets:
+        - name: idam-ui-secret
+          alias: OIDC_CLIENT_SECRET
+        - name: s2s-case-api-secret
+          alias: S2S_SECRET
+        - name: app-insights-connection-string
+          alias: APPLICATIONINSIGHTS_CONNECTION_STRING
+        # AAT would also need the Redis connection string here, aliased to REDIS_URL. There
+        # is no such secret in the sptribs vault yet — the vault has redis-access-key, which
+        # is a key and not a URL, and the app reads a whole connection string. Preview does
+        # not need it: it runs the in-chart Redis and sets REDIS_URL directly. Left out
+        # rather than listed unused, because a listed secret reads as a wired-up one.
+  environment:
+    REDIS_TTL: 6000
+    REDIS_SESSION_PREFIX: "sptribs-send-prototype"
+    CCD_URL: "http://ccd-data-store-api-{{ .Values.global.environment }}.service.core-compute-{{ .Values.global.environment }}.internal"
+    S2S_URL: "http://rpe-service-auth-provider-{{ .Values.global.environment }}.service.core-compute-{{ .Values.global.environment }}.internal"
+    S2S_MICROSERVICE: sptribs_case_api
+    # Hyphen, not a slash: the route is src/pages/(shared)/(oauth2-callback).
+    OIDC_REDIRECT_URI: "https://sptribs-send-prototype.{{ .Values.global.environment }}.platform.hmcts.net/oauth2-callback"
+    OIDC_ISSUER: "https://idam-web-public.{{ .Values.global.environment }}.platform.hmcts.net/o"
+    OIDC_CLIENT_ID: sptribs-frontend
+    OTEL_SERVICE_NAME: sptribs-send-prototype
+    OTEL_ENABLED: true
+    CASE_TYPE_ID: StSend35
+    JURISDICTION_ID: ST_CIC
+    CCD_CREATE_EVENT: create-case

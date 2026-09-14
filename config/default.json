@@ -1,0 +1,39 @@
+{
+  "service": {
+    "name": "Appeal a decision about an education, health and care (EHC) plan",
+    "contactEmail": "send@justice.gov.uk",
+    "contactPhone": "0300 303 5857"
+  },
+  "server": {
+    "port": 3211
+  },
+  "session": {
+    "secret": "sptribs-send-prototype-local-session-secret"
+  },
+  "redis": {
+    "url": "redis://localhost:6379"
+  },
+  "applicationInsights": {
+    "serviceName": "sptribs-send-prototype",
+    "connectionString": "InstrumentationKey=your-instrumentation-key;IngestionEndpoint=https://dc.services.visualstudio.com/",
+    "enabled": false
+  },
+  "idam": {
+    "issuer": "http://localhost:5062/o",
+    "clientId": "sptribs-frontend",
+    "clientSecret": "sptribs-frontend-idam-secret",
+    "redirectUri": "http://localhost:3211/oauth2-callback",
+    "scope": "openid profile roles"
+  },
+  "ccd": {
+    "caseTypeId": "StSend35",
+    "jurisdictionId": "ST_CIC",
+    "dataStoreUrl": "http://localhost:4452",
+    "createEvent": "create-case"
+  },
+  "s2s": {
+    "url": "http://localhost:8489",
+    "microservice": "sptribs_case_api",
+    "secret": "AAAAAAAAAAAAAAAA"
+  }
+}

@@ -1,0 +1,36 @@
+{% extends "_layouts/citizen.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: back, href: backHref }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% if errors | length %}
+        {{ govukErrorSummary({ titleText: errorSummaryTitle, errorList: errors | govukErrorSummary }) }}
+      {% endif %}
+
+      <form method="post" novalidate>
+        {% include "_partials/csrf-input.njk" %}
+        <span class="govuk-caption-l">{{ caption }}</span>
+
+        {{ govukInput({
+          id: "relationship",
+          name: "relationship",
+          value: values.relationship,
+          type: "text",
+          label: { text: relationshipLabel, isPageHeading: true, classes: "govuk-label--l" },
+          hint: { text: relationshipHint },
+          errorMessage: { text: errors.relationship } if errors.relationship
+        }) }}
+
+        {{ govukButton({ text: continueText or save }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

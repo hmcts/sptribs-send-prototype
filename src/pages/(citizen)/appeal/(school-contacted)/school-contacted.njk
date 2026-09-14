@@ -1,0 +1,39 @@
+{% extends "_layouts/citizen.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/date-input/macro.njk" import govukDateInput %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: back, href: backHref }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% if errors | length %}
+        {{ govukErrorSummary({ titleText: errorSummaryTitle, errorList: errors | govukErrorSummary }) }}
+      {% endif %}
+
+      <form method="post" novalidate>
+        {% include "_partials/csrf-input.njk" %}
+        <span class="govuk-caption-l">{{ caption }}</span>
+
+        {{ govukDateInput({
+          id: "dateContacted",
+          namePrefix: "dateContacted",
+          fieldset: { legend: { text: dateContactedLabel, isPageHeading: true, classes: "govuk-fieldset__legend--l" } },
+          hint: { text: dateContactedHint },
+          items: [
+            { name: "day", classes: "govuk-input--width-2", value: values["dateContacted-day"] },
+            { name: "month", classes: "govuk-input--width-2", value: values["dateContacted-month"] },
+            { name: "year", classes: "govuk-input--width-4", value: values["dateContacted-year"] }
+          ],
+          errorMessage: { text: errors.dateContacted } if errors.dateContacted
+        }) }}
+
+        {{ govukButton({ text: continueText or save }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "_layouts/citizen.njk" %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-l">{{ title }}</h1>
+      <p class="govuk-body-l">{{ intro }}</p>
+
+      <h2 class="govuk-heading-m">{{ complianceHeading }}</h2>
+      <ul class="govuk-list govuk-list--bullet">
+        {% for item in compliance %}<li>{{ item }}</li>{% endfor %}
+      </ul>
+      <p class="govuk-body">{{ claim }}</p>
+
+      <h2 class="govuk-heading-m">{{ problemHeading }}</h2>
+      <p class="govuk-body">{{ problem }}</p>
+      <p class="govuk-body">
+        Email <a class="govuk-link" href="mailto:{{ contactEmail }}">{{ contactEmail }}</a><br>
+        Telephone {{ contactPhone }}<br>
+        Monday to Friday, 9am to 5pm
+      </p>
+
+      <h2 class="govuk-heading-m">{{ liveHeading }}</h2>
+      <p class="govuk-body">{{ live }}</p>
+    </div>
+  </div>
+{% endblock %}

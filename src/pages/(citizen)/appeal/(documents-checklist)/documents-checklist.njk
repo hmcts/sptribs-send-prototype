@@ -1,0 +1,48 @@
+{% extends "_layouts/citizen.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: back, href: backHref }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% if errors | length %}
+        {{ govukErrorSummary({ titleText: errorSummaryTitle, errorList: errors | govukErrorSummary }) }}
+      {% endif %}
+
+      <form method="post" novalidate>
+        {% include "_partials/csrf-input.njk" %}
+        <span class="govuk-caption-l">{{ caption }}</span>
+        <p class="govuk-body-l">{{ lede }}</p>
+
+        {% set items = [] %}
+        {% for option in documentsOptions %}
+          {% set _ = items.push({
+            value: option.value,
+            text: option.text,
+            hint: { text: option.hint } if option.hint,
+            checked: option.value in values.documents
+          }) %}
+        {% endfor %}
+        {{ govukCheckboxes({
+          name: "documents",
+          idPrefix: "documents",
+          fieldset: { legend: { text: documentsLabel, isPageHeading: true, classes: "govuk-fieldset__legend--l" } },
+          hint: { text: documentsHint },
+          items: items,
+          errorMessage: { text: errors.documents } if errors.documents
+        }) }}
+
+        {{ govukInsetText({ text: notLastChance }) }}
+
+        {{ govukButton({ text: save }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}
