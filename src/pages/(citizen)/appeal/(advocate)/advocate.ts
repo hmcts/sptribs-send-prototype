@@ -8,8 +8,8 @@ import { cy, en } from "./advocate.i18n.js";
 /**
  * Whether the appellant has an advocate — SEND35 question 5.1.
  */
-const BACK = "/appeal/task-list";
-const NEXT = "/appeal/task-list";
+const BACK = "/appeal/representative";
+const NEXT = "/appeal/who-receives-information";
 
 const schema = z.object({
   hasAdvocate: z.enum(["Yes", "No"], { message: "hasAdvocateRequired" })

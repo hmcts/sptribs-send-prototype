@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
-import { draftFrom, updateDraft } from "#appeal";
+import { disputesSectionI, draftFrom, updateDraft } from "#appeal";
 import { requireRole } from "#oidc";
 import { fieldErrors } from "#zod-validation";
 import { cy, en } from "./annual-review.i18n.js";
@@ -10,6 +10,10 @@ import { cy, en } from "./annual-review.i18n.js";
  */
 const BACK = "/appeal/plan-sections";
 const NEXT = "/appeal/task-list";
+// The last question of this group, but only for an appeal that disputes Section I — which is
+// answered two pages back, on plan-sections. Without this the citizen is returned to the hub
+// with "The school, college or education provider" still outstanding.
+const SCHOOL = "/appeal/school-disagreement";
 
 const schema = z.object({
   followingAnnualReview: z.enum(["Yes", "No"], { message: "followingAnnualReviewRequired" })
@@ -39,7 +43,7 @@ const postHandler = async (req: Request, res: Response) => {
   await updateDraft(req, "typeOfAppeal", {
     ...parsed.data
   });
-  res.redirect(302, NEXT);
+  res.redirect(302, disputesSectionI(draftFrom(req)) ? SCHOOL : NEXT);
 };
 
 function render(res: Response, values: Record<string, unknown>, errors: Record<string, string>): void {

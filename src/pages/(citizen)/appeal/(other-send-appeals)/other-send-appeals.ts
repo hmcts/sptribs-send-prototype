@@ -9,7 +9,7 @@ import { cy, en } from "./other-send-appeals.i18n.js";
  * Other SEND appeals — SEND35 question 14.1.
  */
 const BACK = "/appeal/task-list";
-const NEXT = "/appeal/task-list";
+const NEXT = "/appeal/other-court-cases";
 
 const schema = z.object({
   otherSendAppeals: z.enum(["Yes", "No"], { message: "otherSendAppealsRequired" })

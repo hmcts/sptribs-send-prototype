@@ -9,7 +9,7 @@ import { cy, en } from "./contact-address-for-updates.i18n.js";
  * The postal address for tribunal correspondence — SEND35 question 6.4.
  */
 const BACK = "/appeal/contact-details-for-updates";
-const NEXT = "/appeal/task-list";
+const NEXT = "/appeal/parental-responsibility";
 
 const schema = z.object({
   address: z.object({

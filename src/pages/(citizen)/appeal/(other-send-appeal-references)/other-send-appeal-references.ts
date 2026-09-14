@@ -9,7 +9,7 @@ import { cy, en } from "./other-send-appeal-references.i18n.js";
  * The other SEND appeal references — SEND35 question 14.1.
  */
 const BACK = "/appeal/other-send-appeals";
-const NEXT = "/appeal/task-list";
+const NEXT = "/appeal/other-court-cases";
 
 const schema = z.object({
   appealReferenceNumbers: z.string().trim().min(1, "appealReferenceNumbersRequired").max(500, "appealReferenceNumbersTooLong")

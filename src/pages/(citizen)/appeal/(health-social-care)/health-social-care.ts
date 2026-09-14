@@ -8,7 +8,7 @@ import { cy, en } from "./health-social-care.i18n.js";
 /**
  * Whether health or social care recommendations are wanted — SEND35 question 11.1.
  */
-const BACK = "/appeal/task-list";
+const BACK = "/appeal/reasons";
 const NEXT = "/appeal/task-list";
 
 const schema = z.object({

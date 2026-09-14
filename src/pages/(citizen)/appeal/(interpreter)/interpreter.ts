@@ -8,8 +8,8 @@ import { cy, en } from "./interpreter.i18n.js";
 /**
  * Whether an interpreter is needed — SEND35 question 17.1.
  */
-const BACK = "/appeal/task-list";
-const NEXT = "/appeal/task-list";
+const BACK = "/appeal/video-hearing";
+const NEXT = "/appeal/reasonable-adjustments";
 
 const schema = z.object({
   needsInterpreter: z.enum(["Yes", "No"], { message: "needsInterpreterRequired" })

@@ -12,7 +12,7 @@ import { cy, en } from "./who-receives-information.i18n.js";
  * listed in full here rather than filtered, so a citizen can see what the choice would
  * be; filtering to the people actually named is the obvious next iteration.
  */
-const BACK = "/appeal/task-list";
+const BACK = "/appeal/advocate";
 const NEXT = "/appeal/contact-details-for-updates";
 
 const schema = z.object({

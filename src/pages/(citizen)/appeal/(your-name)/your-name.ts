@@ -10,6 +10,10 @@ import { cy, en } from "./your-name.i18n.js";
  */
 const BACK = "/appeal/task-list";
 const NEXT = "/appeal/your-relationship";
+// A young person appealing on their own behalf has no relationship to state, which is why the
+// task list hides that task for them. The chain has to skip it too, or they are asked a
+// question the hub says does not apply to them.
+const SKIP_RELATIONSHIP = "/appeal/your-contact-details";
 
 const schema = z.object({
   firstName: z.string().trim().min(1, "firstNameRequired").max(100, "firstNameTooLong"),
@@ -41,7 +45,7 @@ const postHandler = async (req: Request, res: Response) => {
   await updateDraft(req, "appellant", {
     ...parsed.data
   });
-  res.redirect(302, NEXT);
+  res.redirect(302, draftFrom(req).appellant.whoIsAppealing === "youngPerson" ? SKIP_RELATIONSHIP : NEXT);
 };
 
 function render(res: Response, values: Record<string, unknown>, errors: Record<string, string>): void {

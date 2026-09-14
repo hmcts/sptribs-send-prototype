@@ -9,7 +9,7 @@ import { cy, en } from "./advocate-details.i18n.js";
  * The advocate's details — SEND35 questions 5.2 and 5.3.
  */
 const BACK = "/appeal/advocate";
-const NEXT = "/appeal/task-list";
+const NEXT = "/appeal/who-receives-information";
 
 /** Deliberately loose: GOV.UK guidance is to check for an @ and not to reject unusual but valid addresses. */
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;

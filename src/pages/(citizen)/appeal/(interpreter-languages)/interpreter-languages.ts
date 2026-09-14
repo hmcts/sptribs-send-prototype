@@ -9,7 +9,7 @@ import { cy, en } from "./interpreter-languages.i18n.js";
  * The languages needed — SEND35 question 17.1.
  */
 const BACK = "/appeal/interpreter";
-const NEXT = "/appeal/task-list";
+const NEXT = "/appeal/reasonable-adjustments";
 
 const schema = z.object({
   languages: z.string().trim().min(1, "languagesRequired").max(500, "languagesTooLong")

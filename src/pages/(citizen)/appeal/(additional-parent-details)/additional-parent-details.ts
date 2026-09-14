@@ -9,7 +9,7 @@ import { cy, en } from "./additional-parent-details.i18n.js";
  * The other parent or carer's details — SEND35 question 3.1.
  */
 const BACK = "/appeal/additional-parent";
-const NEXT = "/appeal/task-list";
+const NEXT = "/appeal/representative";
 
 /** Deliberately loose: GOV.UK guidance is to check for an @ and not to reject unusual but valid addresses. */
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;

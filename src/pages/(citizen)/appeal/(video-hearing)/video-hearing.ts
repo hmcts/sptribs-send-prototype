@@ -9,7 +9,7 @@ import { cy, en } from "./video-hearing.i18n.js";
  * Whether the appellant can attend by video — SEND35 question 16.3.
  */
 const BACK = "/appeal/earlier-hearing";
-const NEXT = "/appeal/task-list";
+const NEXT = "/appeal/interpreter";
 
 const schema = z.object({
   canAttendByVideo: z.enum(["Yes", "No"], { message: "canAttendByVideoRequired" })

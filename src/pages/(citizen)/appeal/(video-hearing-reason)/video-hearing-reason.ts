@@ -9,7 +9,7 @@ import { cy, en } from "./video-hearing-reason.i18n.js";
  * Why the appellant cannot attend by video — SEND35 question 16.3.
  */
 const BACK = "/appeal/video-hearing";
-const NEXT = "/appeal/task-list";
+const NEXT = "/appeal/interpreter";
 
 const schema = z.object({
   cannotAttendByVideoReason: z.string().trim().min(1, "cannotAttendByVideoReasonRequired").max(2000, "cannotAttendByVideoReasonTooLong")

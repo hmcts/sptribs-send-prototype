@@ -8,7 +8,7 @@ import { cy, en } from "./parental-responsibility.i18n.js";
 /**
  * Whether anyone else holds parental responsibility — SEND35 question 7.1.
  */
-const BACK = "/appeal/task-list";
+const BACK = "/appeal/contact-address-for-updates";
 const NEXT = "/appeal/task-list";
 
 const schema = z.object({

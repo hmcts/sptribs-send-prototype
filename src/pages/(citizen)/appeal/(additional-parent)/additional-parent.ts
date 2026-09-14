@@ -9,7 +9,7 @@ import { cy, en } from "./additional-parent.i18n.js";
  * Whether to name another parent or carer — SEND35 question 3.1.
  */
 const BACK = "/appeal/task-list";
-const NEXT = "/appeal/task-list";
+const NEXT = "/appeal/representative";
 
 const schema = z.object({
   addParentOrCarer: z.enum(["Yes", "No"], { message: "addParentOrCarerRequired" })

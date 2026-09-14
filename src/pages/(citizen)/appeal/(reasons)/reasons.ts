@@ -11,7 +11,7 @@ import { cy, en } from "./reasons.i18n.js";
  * The one genuinely open question on the form, and the one the tribunal reads first.
  */
 const BACK = "/appeal/task-list";
-const NEXT = "/appeal/task-list";
+const NEXT = "/appeal/health-social-care";
 
 const schema = z.object({
   appealReasons: z.string().trim().min(1, "appealReasonsRequired").max(10000, "appealReasonsTooLong")

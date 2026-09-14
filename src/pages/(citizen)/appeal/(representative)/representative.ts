@@ -8,8 +8,8 @@ import { cy, en } from "./representative.i18n.js";
 /**
  * Whether the appellant has a representative — SEND35 question 4.1.
  */
-const BACK = "/appeal/task-list";
-const NEXT = "/appeal/task-list";
+const BACK = "/appeal/additional-parent";
+const NEXT = "/appeal/advocate";
 
 const schema = z.object({
   hasRepresentative: z.enum(["Yes", "No"], { message: "hasRepresentativeRequired" })

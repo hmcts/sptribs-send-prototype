@@ -8,7 +8,7 @@ import { cy, en } from "./school-disagreement.i18n.js";
 /**
  * The nature of the Section I disagreement — SEND35 question 9.1.
  */
-const BACK = "/appeal/task-list";
+const BACK = "/appeal/annual-review";
 const NEXT = "/appeal/school-requested";
 
 const schema = z.object({

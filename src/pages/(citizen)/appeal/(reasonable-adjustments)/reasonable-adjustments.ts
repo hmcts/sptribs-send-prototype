@@ -8,7 +8,7 @@ import { cy, en } from "./reasonable-adjustments.i18n.js";
 /**
  * Whether reasonable adjustments are needed — SEND35 question 17.2.
  */
-const BACK = "/appeal/task-list";
+const BACK = "/appeal/interpreter";
 const NEXT = "/appeal/task-list";
 
 const schema = z.object({

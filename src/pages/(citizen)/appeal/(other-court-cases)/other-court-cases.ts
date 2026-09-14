@@ -8,7 +8,7 @@ import { cy, en } from "./other-court-cases.i18n.js";
 /**
  * Other court or tribunal cases — SEND35 question 15.1.
  */
-const BACK = "/appeal/task-list";
+const BACK = "/appeal/other-send-appeals";
 const NEXT = "/appeal/task-list";
 
 const schema = z.object({
