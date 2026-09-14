@@ -18,6 +18,8 @@ export const en = (params: { done?: number; total?: number }) => ({
   saveNote: "Your answers are saved as you go. You can leave this page and come back to it.",
   statusCompleted: "Completed",
   statusNotStarted: "Not started",
+  statusOptional: "Optional",
+  optionalHint: "You can send documents later, so you do not have to list any now.",
   submitHeading: "Send your appeal",
   submitReady: "You have answered everything the tribunal needs. Check your answers, then send your appeal.",
   submitNotReady: "You cannot send your appeal until you have completed every section.",

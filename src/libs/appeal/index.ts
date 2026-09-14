@@ -2,7 +2,7 @@ export { caseDataFrom, ccdFieldId, isoDate } from "./case-data.js";
 export { needsLateExplanation, timeLimit } from "./deadline.js";
 export { clearDraft, draftFrom, replaceSection, updateDraft } from "./draft.js";
 export type { Task, TaskGroup } from "./sections.js";
-export { applicableTasks, completedCount, disputesPlanContent, disputesSectionI, readyToSubmit, sectionIOnly, TASK_GROUPS } from "./sections.js";
+export { applicableTasks, completedCount, disputesPlanContent, disputesSectionI, readyToSubmit, requiredTasks, sectionIOnly, TASK_GROUPS } from "./sections.js";
 export type { SummaryRow, SummarySection } from "./summary.js";
 export { summarise } from "./summary.js";
 export type {

@@ -23,6 +23,15 @@ export interface Task {
   complete: (draft: AppealDraft) => boolean;
   /** False when this appeal does not reach the task at all. */
   applies?: (draft: AppealDraft) => boolean;
+  /**
+   * True when the appeal can be sent without this task.
+   *
+   * Optional tasks are shown but not counted, and never hold up submission. Marking one here
+   * is what keeps the hub honest: an optional task the citizen has nothing to put in stays
+   * un-ticked forever, so counting it means the progress line can never reach the total while
+   * the submit copy says everything needed has been answered — the page contradicting itself.
+   */
+  optional?: boolean;
 }
 
 export interface TaskGroup {
@@ -261,6 +270,9 @@ export const TASK_GROUPS: TaskGroup[] = [
       {
         slug: "supporting-evidence",
         title: "Your supporting evidence",
+        // SEND35 says the appeal form is not the last chance to send documents, so an appeal
+        // with nothing to list here is complete.
+        optional: true,
         complete: (draft) => draft.supportingEvidence.length > 0
       }
     ]
@@ -272,20 +284,24 @@ export function applicableTasks(draft: AppealDraft): Task[] {
   return TASK_GROUPS.flatMap((group) => group.tasks).filter((task) => task.applies?.(draft) ?? true);
 }
 
-/**
- * Whether the appeal can be submitted.
- *
- * Supporting evidence is excluded: SEND35 says the appeal form is not the last
- * chance to send documents, so requiring evidence up front would turn a "you can
- * also add" into a blocker.
- */
-export function readyToSubmit(draft: AppealDraft): boolean {
-  return applicableTasks(draft)
-    .filter((task) => task.slug !== "supporting-evidence")
-    .every((task) => task.complete(draft));
+/** The tasks this appeal cannot be sent without. */
+export function requiredTasks(draft: AppealDraft): Task[] {
+  return applicableTasks(draft).filter((task) => !task.optional);
 }
 
+/** Whether the appeal can be submitted. */
+export function readyToSubmit(draft: AppealDraft): boolean {
+  return requiredTasks(draft).every((task) => task.complete(draft));
+}
+
+/**
+ * Progress, over the tasks that have to be done.
+ *
+ * Optional tasks are left out of both halves rather than the numerator only, so the count can
+ * actually reach its total. Including them meant a citizen with no supporting evidence to list
+ * read "23 of 24 sections" next to "You have answered everything the tribunal needs".
+ */
 export function completedCount(draft: AppealDraft): { done: number; total: number } {
-  const tasks = applicableTasks(draft);
+  const tasks = requiredTasks(draft);
   return { done: tasks.filter((task) => task.complete(draft)).length, total: tasks.length };
 }

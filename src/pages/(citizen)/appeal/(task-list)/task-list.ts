@@ -26,7 +26,8 @@ const getHandler = (req: Request, res: Response) => {
       .map((task) => ({
         title: task.title,
         href: `/appeal/${task.slug}`,
-        complete: task.complete(draft)
+        complete: task.complete(draft),
+        optional: task.optional ?? false
       }))
   })).filter((group) => group.tasks.length > 0);
 

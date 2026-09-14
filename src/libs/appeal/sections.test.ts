@@ -122,6 +122,59 @@ describe("completedCount", () => {
 
     expect(completedCount(refusal).total).toBeLessThan(completedCount(disputed).total);
   });
+
+  it("should reach its total for an appeal with no supporting evidence to list", () => {
+    // The bug this pins: supporting evidence never has to be filled in, but it was counted, so
+    // a finished appeal read "23 of 24 sections" directly above "You have answered everything
+    // the tribunal needs" — the same page telling the citizen both that they were done and that
+    // they were not, with nothing they could do about it.
+    const draft = completeDraft();
+    draft.supportingEvidence = [];
+
+    const { done, total } = completedCount(draft);
+
+    expect(readyToSubmit(draft), "the appeal is submittable, so the count must agree").toBe(true);
+    expect(done).toBe(total);
+  });
+
+  it("should agree with readyToSubmit in both directions", () => {
+    // The property behind it: the count reaching its total and the appeal being sendable are
+    // the same statement, so they cannot disagree whatever is or is not filled in.
+    const complete = completeDraft();
+    complete.supportingEvidence = [];
+    const incomplete = completeDraft();
+    incomplete.reasons.appealReasons = "";
+
+    for (const draft of [emptyDraft(), complete, incomplete]) {
+      const { done, total } = completedCount(draft);
+      expect(done === total).toBe(readyToSubmit(draft));
+    }
+  });
+
+  it("should still count a required task that is unanswered", () => {
+    const draft = completeDraft();
+    draft.support.needsAdjustments = undefined;
+
+    const { done, total } = completedCount(draft);
+    expect(done).toBeLessThan(total);
+  });
+});
+
+describe("optional tasks", () => {
+  it("should mark supporting evidence, and only that, as optional", () => {
+    const optional = TASK_GROUPS.flatMap((group) => group.tasks)
+      .filter((task) => task.optional)
+      .map((task) => task.slug);
+
+    expect(optional).toEqual(["supporting-evidence"]);
+  });
+
+  it("should not let an optional task hold up submission", () => {
+    const draft = completeDraft();
+    draft.supportingEvidence = [];
+
+    expect(readyToSubmit(draft)).toBe(true);
+  });
 });
 
 /** A refusal-to-make-a-plan appeal with every applicable answer given. */

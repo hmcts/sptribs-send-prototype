@@ -14,13 +14,17 @@
       {% for group in groups %}
         <h2 class="govuk-heading-m">{{ group.title }}</h2>
 
+        {# An optional task says so in its own status rather than "Not started", which reads as
+           outstanding work. Nothing to add here is a finished appeal, so the citizen should not
+           be left looking for the thing they have missed. #}
         {% set items = [] %}
         {% for task in group.tasks %}
           {% set _ = items.push({
             title: { text: task.title },
+            hint: { text: optionalHint } if task.optional else undefined,
             href: task.href,
             status: {
-              text: statusCompleted if task.complete else statusNotStarted,
+              text: statusCompleted if task.complete else (statusOptional if task.optional else statusNotStarted),
               classes: "" if task.complete else "govuk-task-list__status--cannot-start-yet"
             }
           }) %}
