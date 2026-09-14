@@ -18,6 +18,9 @@ declare module "express-session" {
     // by /oauth2-callback.
     oidcCodeVerifier?: string;
     oidcNonce?: string;
+    // How many times /oauth2-callback has restarted the handshake, so a stale
+    // authorization code is retried once but a broken one cannot loop.
+    oidcRestarts?: number;
     // CSRF secret bound to this session — see src/middleware/csrf.ts.
     csrfSecret?: string;
   }

@@ -16,7 +16,9 @@ export const GET = async (req: Request, res: Response) => {
 
   const verifier = session.oidcCodeVerifier;
   if (!verifier) {
-    return res.status(400).send("Missing PKCE state — restart the sign-in flow");
+    // No PKCE state: the callback was reached without starting sign-in — a bookmark, or a
+    // session that expired mid-handshake. Start the flow rather than explaining it.
+    return restartSignIn(req, res);
   }
 
   const checks: Parameters<typeof client.authorizationCodeGrant>[2] = { pkceCodeVerifier: verifier, idTokenExpected: true };
@@ -24,7 +26,20 @@ export const GET = async (req: Request, res: Response) => {
     checks.expectedNonce = session.oidcNonce;
   }
 
-  const tokens = await exchangeCode(oidc, currentUrl(req), checks);
+  let tokens: Awaited<ReturnType<typeof client.authorizationCodeGrant>>;
+  try {
+    tokens = await exchangeCode(oidc, currentUrl(req), checks);
+  } catch (error) {
+    // An authorization code is single-use and short-lived, so `invalid_grant` means this one
+    // has already been redeemed or has expired — which is what the browser Back button does
+    // after a successful sign-in, and what re-opening the callback URL does. It is not a
+    // service fault, and "Sorry, there is a problem with the service" is the wrong answer:
+    // send them back through sign-in for a fresh code.
+    if (isStaleCode(error)) {
+      return restartSignIn(req, res);
+    }
+    throw error;
+  }
   const { access_token, id_token, refresh_token } = tokens;
   const claims = tokens.claims();
   if (!claims || typeof claims.sub !== "string") {
@@ -52,6 +67,8 @@ export const GET = async (req: Request, res: Response) => {
   session.returnTo = undefined;
   session.oidcCodeVerifier = undefined;
   session.oidcNonce = undefined;
+  // Cleared on success, so a stale code later in the session still gets its one retry.
+  session.oidcRestarts = undefined;
 
   // Persist before redirecting: express-session only writes at end-of-response,
   // and a 302 can be followed before that write lands in Redis, which would
@@ -102,6 +119,46 @@ async function exchangeCode(
 
     throw caught;
   }
+}
+
+/**
+ * Whether a token-exchange failure means "this code is no longer usable".
+ *
+ * `invalid_grant` is IDAM's answer for a code that has been redeemed already, has expired, or
+ * was issued for a different redirect URI. All three are recoverable by asking for a new one.
+ */
+export function isStaleCode(error: unknown): boolean {
+  const oauthError = error as { error?: string; cause?: { error?: string } };
+  return oauthError?.error === "invalid_grant" || oauthError?.cause?.error === "invalid_grant";
+}
+
+/**
+ * Send the user back through sign-in, preserving where they were heading.
+ *
+ * Guarded with a counter, because the failure this recovers from and a genuinely broken
+ * handshake are indistinguishable from here: without the guard, a real fault would bounce the
+ * browser between `/login` and `/oauth2-callback` indefinitely instead of reporting anything.
+ * One retry is enough — a stale code succeeds on the next attempt by definition.
+ */
+export async function restartSignIn(req: Request, res: Response): Promise<void> {
+  const session = req.session;
+  const attempts = (session.oidcRestarts ?? 0) + 1;
+
+  session.oidcCodeVerifier = undefined;
+  session.oidcNonce = undefined;
+
+  if (attempts > 1) {
+    session.oidcRestarts = undefined;
+    await saveSession(session);
+    console.error("Sign-in restarted twice without completing; not redirecting again");
+    throw new Error("Sign-in could not be completed after restarting");
+  }
+
+  session.oidcRestarts = attempts;
+  const returnTo = session.returnTo;
+  await saveSession(session);
+
+  res.redirect(302, returnTo ? `/login?returnTo=${encodeURIComponent(returnTo)}` : "/login");
 }
 
 /** The claim, and the two values, out of an openid-client claim-comparison failure. */
