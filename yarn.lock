@@ -1955,18 +1955,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@redis/bloom@npm:5.12.1":
-  version: 5.12.1
-  resolution: "@redis/bloom@npm:5.12.1"
+"@redis/bloom@npm:5.12.4":
+  version: 5.12.4
+  resolution: "@redis/bloom@npm:5.12.4"
   peerDependencies:
-    "@redis/client": ^5.12.1
-  checksum: 10c0/b267b1a80568beb188d89a9f2f07db16c88e4bfd2258873126d13b7ed722616dbb21fffdab0797d54a8547845fe3e4c5dc212d1af94f22a21c2a2a12bae71976
+    "@redis/client": ^5.12.4
+  checksum: 10c0/6396f0950042317221f048a155494cc3fd4953d7dc0002ac80d3cf6f21d292e412459b11b059c80ca2de27d3ae90e9c7293103f86639e01d7cc610df1ce33652
   languageName: node
   linkType: hard
 
-"@redis/client@npm:5.12.1":
-  version: 5.12.1
-  resolution: "@redis/client@npm:5.12.1"
+"@redis/client@npm:5.12.4":
+  version: 5.12.4
+  resolution: "@redis/client@npm:5.12.4"
   dependencies:
     cluster-key-slot: "npm:1.1.2"
   peerDependencies:
@@ -1977,34 +1977,34 @@ __metadata:
       optional: true
     "@opentelemetry/api":
       optional: true
-  checksum: 10c0/f475aa936b7cf73c3d2166862377d3502f16deaf5423d31f6899f6387440195aa2524c74d1df26da591a61b4ac0122a1e1f8d783b770e7630c5f7444445c41b0
+  checksum: 10c0/bf8b081a128986aa78b0c334a211f23b2c3570227212d997a3c64ab6b013aa8b6d058f7799e82ee615861709fa6e2856fc35e6652b6698b6b350f08fc55c9db5
   languageName: node
   linkType: hard
 
-"@redis/json@npm:5.12.1":
-  version: 5.12.1
-  resolution: "@redis/json@npm:5.12.1"
+"@redis/json@npm:5.12.4":
+  version: 5.12.4
+  resolution: "@redis/json@npm:5.12.4"
   peerDependencies:
-    "@redis/client": ^5.12.1
-  checksum: 10c0/c02a94e148944c47c2995bb8df61c6cde51c7a4e380e7f4832fb56ff586754e5cc788edf0a470e5eee3cf19af8ad0b85c94bc759f91c93986d14b52fa1829200
+    "@redis/client": ^5.12.4
+  checksum: 10c0/7752bbc25d3f5a340ce2daddb751013b2678b4c2b5a816f25036eff1eb11f32818eb6a9b995d5c0d31399cca253e0b8d52b935f539eca98ffae6efac958c9bb1
   languageName: node
   linkType: hard
 
-"@redis/search@npm:5.12.1":
-  version: 5.12.1
-  resolution: "@redis/search@npm:5.12.1"
+"@redis/search@npm:5.12.4":
+  version: 5.12.4
+  resolution: "@redis/search@npm:5.12.4"
   peerDependencies:
-    "@redis/client": ^5.12.1
-  checksum: 10c0/1dfe70e173e4544ae7c8d8a172e069fbf47f525066fcd43952628f037b61137673ef2dad1454982c9508e4575ec63626f4dc3793c20eef65b61b8b195cc75289
+    "@redis/client": ^5.12.4
+  checksum: 10c0/01ec02f0a2e9f4cb4b18a3b2baf6410f44b94be7188d912b27bde8c030942b318f274b97abfcf9ef688ba6f76a50a6ed4e70aa14113fcb3fcc57d6ba093764c9
   languageName: node
   linkType: hard
 
-"@redis/time-series@npm:5.12.1":
-  version: 5.12.1
-  resolution: "@redis/time-series@npm:5.12.1"
+"@redis/time-series@npm:5.12.4":
+  version: 5.12.4
+  resolution: "@redis/time-series@npm:5.12.4"
   peerDependencies:
-    "@redis/client": ^5.12.1
-  checksum: 10c0/8d450fdaa370e3ab7bff31197bf3e5102b3cfccbd0e0997a6d17b00e51f67447c355ae2cd76268e83f9459f1a23f606286eab2e81b57fded147fae6c5438b4ca
+    "@redis/client": ^5.12.4
+  checksum: 10c0/7b90252b6e7b39c1871d2f9c9e4509a09f76b26617b1f122f2c6c1b8ee6c31dd759d9192dfafd3762edc0fcc63fd41e02f4f2e4daf15f5eab111070032d897f8
   languageName: node
   linkType: hard
 
@@ -4844,16 +4844,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"redis@npm:5.12.1":
-  version: 5.12.1
-  resolution: "redis@npm:5.12.1"
+"redis@npm:5.12.4":
+  version: 5.12.4
+  resolution: "redis@npm:5.12.4"
   dependencies:
-    "@redis/bloom": "npm:5.12.1"
-    "@redis/client": "npm:5.12.1"
-    "@redis/json": "npm:5.12.1"
-    "@redis/search": "npm:5.12.1"
-    "@redis/time-series": "npm:5.12.1"
-  checksum: 10c0/ad80825241bced474b104279339f26207b9bb0e6f4d425061f0ccfe7935576c8d70272389c30f49a77bd06fe8e791a09756dbb9280099f358ce63c79efe0b99e
+    "@redis/bloom": "npm:5.12.4"
+    "@redis/client": "npm:5.12.4"
+    "@redis/json": "npm:5.12.4"
+    "@redis/search": "npm:5.12.4"
+    "@redis/time-series": "npm:5.12.4"
+  checksum: 10c0/6061b55338afc67587ac1673c59787a089ec8a6f153b428e85889c881799e2330e25404c3a9b6451e04c33dc3f5dbfe8044dc9afbb6aeb492360e9a0062727b4
   languageName: node
   linkType: hard
 
@@ -5212,7 +5212,7 @@ __metadata:
     nunjucks: "npm:3.2.4"
     openid-client: "npm:6.8.4"
     playwright-core: "npm:1.49.1"
-    redis: "npm:5.12.1"
+    redis: "npm:5.12.4"
     sass: "npm:1.99.0"
     supertest: "npm:7.2.2"
     totp-generator: "npm:1.0.0"
