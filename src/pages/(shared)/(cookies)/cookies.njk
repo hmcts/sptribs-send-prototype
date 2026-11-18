@@ -1,0 +1,83 @@
+{# Our own cookie preferences page, on the citizen layout.
+
+   The starter ships one, and it renders on `layouts/default.njk` → `components/site-header.njk`,
+   which passes `serviceName` to `govukHeader`. govuk-frontend 6 removed that parameter — the
+   service name now belongs to `govukServiceNavigation` — so the starter's header silently drops
+   it and the page loses both the service name and the link back into the service. That is what
+   `_layouts/citizen.njk` exists to get right, so this page extends it.
+
+   Shadowing the starter's template by filename does not work: `configureGovuk` appends our view
+   paths *after* its own, so its `cookie-preferences.njk` always resolves first. Owning the route
+   is the only way to own the layout. #}
+{% extends "_layouts/citizen.njk" %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+
+{% macro cookiesList(cookies) %}
+  {% if cookies | length %}
+    <details class="govuk-details govuk-!-margin-top-2" data-module="govuk-details">
+      <summary class="govuk-details__summary">
+        <span class="govuk-details__summary-text">{{ cookiesUsed }}</span>
+      </summary>
+      <div class="govuk-details__text">
+        <ul class="govuk-list govuk-list--bullet">
+          {% for cookie in cookies %}<li>{{ cookie }}</li>{% endfor %}
+        </ul>
+      </div>
+    </details>
+  {% endif %}
+{% endmacro %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% if saved %}
+        {{ govukNotificationBanner({
+          type: "success",
+          titleText: successBanner,
+          text: successMessage
+        }) }}
+      {% endif %}
+
+      <h1 class="govuk-heading-l">{{ title }}</h1>
+      <p class="govuk-body">{{ intro }}</p>
+
+      <form method="post" novalidate>
+        {% include "_partials/csrf-input.njk" %}
+
+        <h2 class="govuk-heading-m">{{ essentialTitle }}</h2>
+        <p class="govuk-body">{{ essentialDescription }}</p>
+        {{ cookiesList(categories.essential) }}
+
+        {% if categories.analytics %}
+          {{ govukRadios({
+            name: "analytics",
+            idPrefix: "analytics",
+            fieldset: { legend: { text: analyticsTitle, classes: "govuk-fieldset__legend--m" } },
+            hint: { text: analyticsDescription },
+            items: [
+              { value: "on", text: useAnalytics, checked: preferences.analytics },
+              { value: "off", text: doNotUseAnalytics, checked: not preferences.analytics }
+            ]
+          }) }}
+        {% endif %}
+
+        {% if categories.preferences %}
+          {{ govukRadios({
+            name: "preferences",
+            idPrefix: "preferences",
+            fieldset: { legend: { text: preferencesTitle, classes: "govuk-fieldset__legend--m" } },
+            hint: { text: preferencesDescription },
+            items: [
+              { value: "on", text: usePreferences, checked: preferences.preferences },
+              { value: "off", text: doNotUsePreferences, checked: not preferences.preferences }
+            ]
+          }) }}
+        {% endif %}
+
+        {{ govukButton({ text: saveButton }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

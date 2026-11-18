@@ -1,0 +1,52 @@
+# Preview wiring.
+#
+# Jenkins sets `global.environment=aat` for PR builds, so every
+# `{{ .Values.global.environment }}` above resolves to AAT: IDAM and S2S are the real
+# AAT ones. CCD is not — it comes from the sptribs-case-api PR that carries the
+# StSend35 case type, reached by in-cluster DNS because both releases land in the
+# `sptribs` namespace. CASE_API_PR is set in Jenkinsfile_CNP and substituted by the
+# pipeline's envsubst.
+nodejs:
+  # Don't modify below here
+  image: ${IMAGE_NAME}
+  ingressHost: ${SERVICE_FQDN}
+  keyVaults:
+    sptribs:
+      # Every secret needs an explicit alias. getPropertiesVolumeSecrets injects each
+      # mounted file as an environment variable named after the secret's `alias`, or after
+      # the file itself when there is none — so a bare `idam-ui-secret` arrives as
+      # `process.env["idam-ui-secret"]`, which custom-environment-variables.json does not
+      # read. Nothing fails at boot; the token exchange just fails at sign-in with the
+      # client_secret missing.
+      secrets:
+        - name: app-insights-connection-string-preview
+          alias: APPLICATIONINSIGHTS_CONNECTION_STRING
+        - name: idam-ui-secret
+          alias: OIDC_CLIENT_SECRET
+        - name: s2s-case-api-secret
+          alias: S2S_SECRET
+  environment:
+    REDIS_URL: "redis://${SERVICE_NAME}-redis-master:6379"
+    OIDC_REDIRECT_URI: "https://${SERVICE_FQDN}/oauth2-callback"
+    CCD_URL: "http://sptribs-case-api-pr-${CASE_API_PR}-ccd-data-store-api"
+    # Prototype-only: a literal so Preview needs no secret of its own. The real
+    # article is a random_password + azurerm_key_vault_secret in infrastructure/.
+    SESSION_SECRET: "sptribs-send-prototype-preview-session-secret"
+
+redis:
+  enabled: true
+  image:
+    registry: hmctsprod.azurecr.io
+    repository: imported/bitnami/redis
+
+# Without this the per-PR hostname is not a registered redirect URI on the
+# sptribs-frontend IDAM client, and every sign-in fails on the callback.
+idam-pr:
+  enabled: true
+  redirect_uris:
+    sptribs-frontend:
+      - https://${SERVICE_FQDN}/oauth2-callback
+
+global:
+  security:
+    allowInsecureImages: true

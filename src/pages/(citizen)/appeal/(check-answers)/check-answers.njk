@@ -1,0 +1,42 @@
+{% extends "_layouts/citizen.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: back, href: backHref }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-l">{{ heading }}</h1>
+      <p class="govuk-body">{{ lede }}</p>
+
+      {% for section in sections %}
+        <h2 class="govuk-heading-m">{{ section.title }}</h2>
+
+        {# The answer is escaped first and only then are newlines turned into breaks: it is
+           the citizen's own text, and a multi-line answer (an address, several selected
+           options) has to read as several lines. #}
+        {% set rows = [] %}
+        {% for entry in section.rows %}
+          {% set _ = rows.push({
+            key: { text: entry.key },
+            value: { html: entry.value | escape | replace("\n", "<br>") },
+            actions: { items: [{ href: entry.href, text: change, visuallyHiddenText: entry.changes }] }
+          }) %}
+        {% endfor %}
+        {{ govukSummaryList({ rows: rows }) }}
+      {% endfor %}
+
+      {% if ready %}
+        {{ govukButton({ text: continueText, href: "/appeal/declaration" }) }}
+      {% else %}
+        {{ govukWarningText({ text: notReady, iconFallbackText: "Warning" }) }}
+        {{ govukButton({ text: backToTaskList, href: "/appeal/task-list" }) }}
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

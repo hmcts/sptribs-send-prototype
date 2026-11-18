@@ -1,0 +1,23 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: "sptribs-send-prototype"
+  description: "Prototype citizen frontend for the SEND35 appeal journey — appeal a decision about an education, health and care (EHC) plan."
+  annotations:
+    jenkins.io/job-full-name: cft:HMCTS_j_to_z/sptribs-send-prototype
+    github.com/project-slug: hmcts/sptribs-send-prototype
+  tags:
+    - nodejs
+    - express
+    - govuk-frontend
+    - ccd
+    - sptribs
+  links:
+    - url: https://hmcts-reform.slack.com/app_redirect?channel=special-tribunals-dev-channel
+      title: "#special-tribunals-dev-channel on Slack"
+      icon: chat
+spec:
+  type: service
+  lifecycle: experimental
+  owner: sptribs
+  system: special-tribunals

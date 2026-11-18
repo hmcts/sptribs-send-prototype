@@ -1,0 +1,217 @@
+import * as client from "openid-client";
+import { describe, expect, it, vi } from "vitest";
+import { assertedIssuer, setupOidcClient } from "./client.js";
+
+/**
+ * Agreeing with whichever issuer IDAM actually signs.
+ *
+ * openid-client v6 validates the `iss` claim on every token against the issuer from
+ * discovery, and rejects any difference — a 500 on `/oauth2-callback` and no sign-in at all.
+ *
+ * Both IDAMs disagree with themselves here. **AAT** advertises
+ * `https://idam-web-public.aat.platform.hmcts.net/o` and signs its internal ForgeRock
+ * hostname (`https://forgerock-am.service.core-compute-idam-aat2.internal:8443/openam/...`),
+ * which is unreachable from outside the cluster and cannot be configured as the issuer. The
+ * **simulator** has served both `…:5062/o` and the bare origin depending on the image.
+ *
+ * The first version of this code stripped a trailing `/o` unconditionally and so began
+ * *causing* the mismatch when the simulator image changed. Hence the rule these pin: ask the
+ * server, do not assume.
+ */
+describe("assertedIssuer", () => {
+  it("should report the iss claim from a token the simulator mints", async (ctx) => {
+    if (!(await simulatorReachable())) {
+      ctx.skip();
+      return;
+    }
+
+    const asserted = await assertedIssuer(new URL("http://localhost:5062/o"), "sptribs-send-prototype", "sptribs-send-prototype-idam-secret");
+
+    // Read from the server, not derived from the configured URL. Which of the two
+    // shapes the current image signs is deliberately NOT asserted — that is the thing
+    // that changed under us and the reason this is a probe rather than a transform.
+    expect(asserted).toMatch(/^http:\/\/localhost:5062(\/o)?$/);
+    expect(asserted).toBe(await simulatorTokenIssuer());
+  });
+
+  it("should give up quietly when there is no simulator to ask", async () => {
+    // A closed port, so the fetch rejects. Returning undefined leaves the discovered
+    // issuer in place; a sign-in that then fails reports the true mismatch, which beats
+    // a guess that silently sends the wrong expectation into the token check.
+    const asserted = await assertedIssuer(new URL("http://localhost:1/o"), "sptribs-send-prototype", "secret");
+
+    expect(asserted).toBeUndefined();
+  });
+
+  it("should read the issuer from a client_credentials grant, as real IDAM requires", async () => {
+    // Real IDAM has no throwaway user to password-grant against, and refuses
+    // client_credentials with the openid scope ("Client_credentials does not support openid
+    // scope"). So the probe asks for `profile` and reads the access token's iss. Without this
+    // grant, assertedIssuer returns undefined against AAT, the advertised issuer stands, and
+    // every sign-in fails the claim check — which is exactly what happened.
+    const requests: URLSearchParams[] = [];
+    const forgerock = "https://forgerock-am.service.core-compute-idam-aat2.internal:8443/openam/oauth2/realms/root/realms/hmcts";
+
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      const body = new URLSearchParams(String((init as RequestInit).body));
+      requests.push(body);
+      // Mirror IDAM: password grants are refused, client_credentials is not.
+      if (body.get("grant_type") !== "client_credentials") {
+        return new Response('{"error":"invalid_grant"}', { status: 400 });
+      }
+      return new Response(JSON.stringify({ access_token: jwtWithIssuer(forgerock) }), {
+        status: 200,
+        headers: { "content-type": "application/json" }
+      });
+    });
+
+    try {
+      const asserted = await assertedIssuer(new URL("https://idam-web-public.aat.platform.hmcts.net/o"), "sptribs-frontend", "secret");
+
+      expect(asserted).toBe(forgerock);
+      const clientCredentials = requests.find((body) => body.get("grant_type") === "client_credentials");
+      expect(clientCredentials?.get("scope"), "asking for openid here is refused by IDAM").not.toContain("openid");
+    } finally {
+      fetchMock.mockRestore();
+    }
+  });
+});
+
+/** An unsigned JWT carrying just an `iss` claim — the probe reads the claim, it does not verify. */
+function jwtWithIssuer(iss: string): string {
+  const part = (value: object) => Buffer.from(JSON.stringify(value)).toString("base64url");
+  return `${part({ alg: "none" })}.${part({ iss })}.`;
+}
+
+describe("setupOidcClient against the local simulator", () => {
+  it("should build a config whose issuer matches the id_token's iss claim", async (ctx) => {
+    const reachable = await simulatorReachable();
+    if (!reachable) {
+      ctx.skip();
+      return;
+    }
+
+    const config = await setupOidcClient();
+    const metadata = config.serverMetadata();
+
+    // The property that matters is *agreement*, not either particular value: whatever
+    // the simulator signs is what openid-client must validate against. Asserting a
+    // literal here is what made this suite pass while the app was broken.
+    expect(metadata.issuer).toBe(await simulatorTokenIssuer());
+  });
+
+  it("should keep every discovered endpoint, because they are absolute URLs", async (ctx) => {
+    const reachable = await simulatorReachable();
+    if (!reachable) {
+      ctx.skip();
+      return;
+    }
+
+    const metadata = (await setupOidcClient()).serverMetadata();
+
+    // Rebuilding the metadata must not move the endpoints — only the issuer the
+    // claim is compared against. They stay under /o.
+    expect(metadata.token_endpoint).toBe("http://localhost:5062/o/token");
+    expect(metadata.jwks_uri).toBe("http://localhost:5062/o/jwks");
+    expect(metadata.authorization_endpoint).toBe("http://localhost:5062/o/authorize");
+    expect(metadata.userinfo_endpoint).toBe("http://localhost:5062/o/userinfo");
+  });
+
+  it("should still allow insecure requests, since the rebuilt config is a new one", async (ctx) => {
+    const reachable = await simulatorReachable();
+    if (!reachable) {
+      ctx.skip();
+      return;
+    }
+
+    // `allowInsecureRequests` is applied to the *discovered* config by the discovery
+    // options; the rebuilt one needs it again or every plain-http call fails. Proven
+    // by a real userinfo-less call: fetching the JWKS through the config's own fetch.
+    const config = await setupOidcClient();
+    await expect(client.fetchUserInfo(config, "not-a-token", "sub")).rejects.not.toThrow(/insecure|https/i);
+  });
+});
+
+/**
+ * Whether there is a *usable* IDAM simulator on 5062 — one that will actually mint a token for
+ * this test's client, not merely something answering on the port.
+ *
+ * The weaker check (does discovery respond?) made these tests environment-dependent in the
+ * worst way: they passed on a CI agent with nothing on 5062 by skipping, and failed on an agent
+ * where some other project's stack held the port and refused this client. A test that depends on
+ * what else happens to be running is worse than one that is skipped, because the failure looks
+ * like the code under test.
+ *
+ * So the probe is the operation the tests need. If it cannot mint a token, there is no simulator
+ * here as far as these tests are concerned, whatever is listening.
+ */
+const simulatorReachable = async (): Promise<boolean> => {
+  try {
+    const discovery = await fetch("http://localhost:5062/o/.well-known/openid-configuration");
+    if (!discovery.ok) {
+      return false;
+    }
+    // Same grant assertedIssuer() uses, so this proves exactly the capability under test.
+    const token = await fetch("http://localhost:5062/o/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "password",
+        client_id: "sptribs-send-prototype",
+        client_secret: "sptribs-send-prototype-idam-secret",
+        username: "issuer-probe@send.local",
+        password: "probe",
+        scope: "openid profile roles"
+      })
+    });
+    return token.ok;
+  } catch {
+    return false;
+  }
+};
+
+/** The `iss` the simulator actually mints, read out of a real id_token. */
+async function simulatorTokenIssuer(): Promise<string> {
+  const jar = new Map<string, string>();
+  const cookies = () => [...jar].map(([k, v]) => `${k}=${v}`).join("; ");
+  const absorb = (r: Response) => {
+    for (const raw of r.headers.getSetCookie?.() ?? []) {
+      const [pair] = raw.split(";");
+      const at = pair.indexOf("=");
+      jar.set(pair.slice(0, at), pair.slice(at + 1));
+    }
+  };
+
+  const redirectUri = "http://localhost:3210/oauth2-callback";
+  const authorize = `http://localhost:5062/o/authorize?redirect_uri=${encodeURIComponent(redirectUri)}&scope=openid+profile+roles&client_id=sptribs-send-prototype&response_type=code&nonce=test-nonce`;
+
+  let reply = await fetch(authorize, { redirect: "manual" });
+  absorb(reply);
+  reply = await fetch(new URL(reply.headers.get("location")!, "http://localhost:5062").href, { redirect: "manual", headers: { cookie: cookies() } });
+  absorb(reply);
+  const loginForm = await reply.text();
+  const action = loginForm.match(/action="([^"]+)"/)![1].replaceAll("&amp;", "&");
+
+  reply = await fetch(new URL(action, "http://localhost:5062").href, {
+    method: "POST",
+    redirect: "manual",
+    headers: { cookie: cookies(), "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ username: "citizen@dev.local", password: "password", save: "" })
+  });
+  const code = new URL(reply.headers.get("location")!, "http://localhost:3210").searchParams.get("code")!;
+
+  const tokens = await fetch("http://localhost:5062/o/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: redirectUri,
+      client_id: "sptribs-send-prototype",
+      client_secret: "sptribs-send-prototype-idam-secret"
+    })
+  });
+  const { id_token } = (await tokens.json()) as { id_token: string };
+  const payload = JSON.parse(Buffer.from(id_token.split(".")[1], "base64url").toString()) as { iss: string };
+  return payload.iss;
+}

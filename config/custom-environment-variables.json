@@ -1,0 +1,33 @@
+{
+  "server": {
+    "port": "PORT"
+  },
+  "redis": {
+    "url": "REDIS_URL"
+  },
+  "session": {
+    "secret": "SESSION_SECRET"
+  },
+  "applicationInsights": {
+    "serviceName": "OTEL_SERVICE_NAME",
+    "connectionString": "APPLICATIONINSIGHTS_CONNECTION_STRING"
+  },
+  "idam": {
+    "issuer": "OIDC_ISSUER",
+    "clientId": "OIDC_CLIENT_ID",
+    "clientSecret": "OIDC_CLIENT_SECRET",
+    "redirectUri": "OIDC_REDIRECT_URI",
+    "scope": "OIDC_SCOPE"
+  },
+  "ccd": {
+    "caseTypeId": "CASE_TYPE_ID",
+    "jurisdictionId": "JURISDICTION_ID",
+    "dataStoreUrl": "CCD_URL",
+    "createEvent": "CCD_CREATE_EVENT"
+  },
+  "s2s": {
+    "url": "S2S_URL",
+    "microservice": "S2S_MICROSERVICE",
+    "secret": "S2S_SECRET"
+  }
+}

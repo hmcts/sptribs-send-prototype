@@ -1,0 +1,44 @@
+{% extends "_layouts/citizen.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: back, href: backHref }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% if errors | length %}
+        {{ govukErrorSummary({ titleText: errorSummaryTitle, errorList: errors | govukErrorSummary }) }}
+      {% endif %}
+
+      <form method="post" novalidate>
+        {% include "_partials/csrf-input.njk" %}
+        <span class="govuk-caption-l">{{ caption }}</span>
+
+        {% set addParentOrCarerItems = [] %}
+        {% for option in addParentOrCarerOptions %}
+          {% set _ = addParentOrCarerItems.push({
+            value: option.value,
+            text: option.text,
+            hint: { text: option.hint } if option.hint,
+            checked: option.value == values.addParentOrCarer
+          }) %}
+        {% endfor %}
+        {{ govukRadios({
+          name: "addParentOrCarer",
+          idPrefix: "addParentOrCarer",
+          fieldset: { legend: { text: addParentOrCarerLabel, isPageHeading: true, classes: "govuk-fieldset__legend--l" } },
+          hint: { text: addParentOrCarerHint },
+          items: addParentOrCarerItems,
+          errorMessage: { text: errors.addParentOrCarer } if errors.addParentOrCarer
+        }) }}
+
+        {{ govukButton({ text: continueText or save }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

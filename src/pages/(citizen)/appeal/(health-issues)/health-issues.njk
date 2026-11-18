@@ -1,0 +1,47 @@
+{% extends "_layouts/citizen.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/character-count/macro.njk" import govukCharacterCount %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% block beforeContent %}
+  {{ govukBackLink({ text: back, href: backHref }) }}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% if errors | length %}
+        {{ govukErrorSummary({ titleText: errorSummaryTitle, errorList: errors | govukErrorSummary }) }}
+      {% endif %}
+
+      <form method="post" novalidate>
+        {% include "_partials/csrf-input.njk" %}
+        <span class="govuk-caption-l">{{ caption }}</span>
+        <h1 class="govuk-heading-l">{{ heading }}</h1>
+
+        {{ govukCharacterCount({
+          id: "healthIssues",
+          name: "healthIssues",
+          value: values.healthIssues,
+          maxlength: 5000,
+          rows: 8,
+          label: { text: healthIssuesLabel, classes: "govuk-label--s" },
+          errorMessage: { text: errors.healthIssues } if errors.healthIssues
+        }) }}
+
+        {{ govukCharacterCount({
+          id: "healthRecommendations",
+          name: "healthRecommendations",
+          value: values.healthRecommendations,
+          maxlength: 5000,
+          rows: 8,
+          label: { text: healthRecommendationsLabel, classes: "govuk-label--s" },
+          errorMessage: { text: errors.healthRecommendations } if errors.healthRecommendations
+        }) }}
+
+        {{ govukButton({ text: continueText or save }) }}
+      </form>
+    </div>
+  </div>
+{% endblock %}

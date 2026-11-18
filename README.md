@@ -153,7 +153,8 @@ These are deliberate, and they are the first things to change if this becomes a 
 Two independent PRs land in the `sptribs` namespace and talk to each other over in-cluster
 DNS:
 
-1. A PR on `hmcts/sptribs-case-api` carrying the `StSend35` case type. Note its number.
+1. A PR on `hmcts/sptribs-case-api` carrying the `StSend35` case type. Note its number —
+   currently [#2642](https://github.com/hmcts/sptribs-case-api/pull/2642).
 2. A PR here, with `env.CASE_API_PR` in `Jenkinsfile_CNP` set to that number.
 
 `values.preview.template.yaml` then points `CCD_URL` at
@@ -161,6 +162,10 @@ DNS:
 for PR builds, so IDAM and S2S are the real AAT ones while CCD is the case-api PR's.
 
 You need the HMCTS VPN to reach a preview URL.
+
+The case-api chart's `global.idamApiUrl` must be `idam-api`, not `idam-web-public`, or the CCD
+submit fails — ccd-data-store resolves the acting user with `GET /api/v1/users/{id}`, which
+only idam-api routes.
 
 ## Licence
 
